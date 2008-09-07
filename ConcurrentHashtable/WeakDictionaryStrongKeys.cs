@@ -7,11 +7,11 @@ namespace ConcurrentHashtable
 {
     public struct WeakDictionaryStrongKeysItem<TKey>
     {
-        internal Int32 _Hash;
+        internal UInt32 _Hash;
         internal TKey _Key;
         internal WeakReference _Value;
 
-        internal WeakDictionaryStrongKeysItem(Int32 hash, TKey key, WeakReference value )
+        internal WeakDictionaryStrongKeysItem(UInt32 hash, TKey key, WeakReference value)
         {
             _Hash = hash;
             _Key = key;
@@ -21,10 +21,10 @@ namespace ConcurrentHashtable
 
     public struct WeakDictionaryStrongKeysKey<TKey>
     {
-        internal Int32 _Hash;
+        internal UInt32 _Hash;
         internal TKey _Key;
 
-        internal WeakDictionaryStrongKeysKey(Int32 hash, TKey key )
+        internal WeakDictionaryStrongKeysKey(UInt32 hash, TKey key)
         {
             _Hash = hash;
             _Key = key;
@@ -59,10 +59,10 @@ namespace ConcurrentHashtable
 
         #region Traits
 
-        internal protected override int GetHashCode(ref WeakDictionaryStrongKeysItem<TKey> item)
+        internal protected override UInt32 GetHashCode(ref WeakDictionaryStrongKeysItem<TKey> item)
         { return item._Hash; }
 
-        internal protected override int GetHashCode(ref WeakDictionaryStrongKeysKey<TKey> key)
+        internal protected override UInt32 GetHashCode(ref WeakDictionaryStrongKeysKey<TKey> key)
         { return key._Hash; }
 
         internal protected override bool Equals(ref WeakDictionaryStrongKeysItem<TKey> item, ref WeakDictionaryStrongKeysKey<TKey> key)
@@ -106,7 +106,7 @@ namespace ConcurrentHashtable
 
         public IEqualityComparer<TKey> _Comparer;
 
-        Int32 GetHashCode(TKey key)
+        UInt32 GetHashCode(TKey key)
         { return Hasher.Rehash(_Comparer.GetHashCode(key)); }
 
         #region Public accessors

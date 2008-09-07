@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace ConcurrentHashtable
 {
@@ -36,54 +37,60 @@ namespace ConcurrentHashtable
 
         #region Cleaning Tables
 
-        private static void CleanTables(object nothing)
-        {
-            try
-            {
-                int ctr = 0;
-
-                //trim list
-                lock (TableList)
-                {
-                    for (int i = 0; i < TableList.Count; ++i)
-                    {
-                        WeakReference wr = TableList[i];
-
-                        if (wr.Target != null)
-                            TableList[ctr++] = wr;
-                    }
-
-                    TableList.RemoveRange(ctr, TableList.Count - ctr);
-                }
-
-                //check live tables
-                for (int i = 0; i < ctr; ++i)
-                {
-                    HashtableBase wdb;
-
-                    lock (TableList)
-                        wdb = (HashtableBase)(TableList[i].Target);
-
-                    if (wdb != null)
-                        wdb.DoTableMaintenance();
-                }
-            }
-            finally
-            {
-                lock (GCSpyReference)
-                {
-                    TablesCleaningIsPending = false;
-
-                    if (GCSpyReference.Target == null)
-                        GCSpyReference.Target = new GCSpy();
-                }
-            }
-        }
+        static int _TablesToBeCleaned;
 
         /// <summary>
         /// Implement in derived classes
         /// </summary>
         protected abstract void DoTableMaintenance();
+
+        private static void CleanTable(object tableAsObject)
+        {
+            var table = (HashtableBase)tableAsObject;
+
+            try
+            {
+                if( table != null )
+                    table.DoTableMaintenance();
+            }
+            finally
+            {
+                //when last table is cleaned.. ready for next sweep.
+                if (Interlocked.Decrement(ref _TablesToBeCleaned) == 0)
+                    lock (GCSpyReference)
+                    {
+                        TablesCleaningIsPending = false;
+
+                        if (GCSpyReference.Target == null)
+                            GCSpyReference.Target = new GCSpy();
+                    }
+            }
+        }
+
+        private static void CleanTables(object nothing)
+        {                        
+            lock (TableList)
+            {
+                int ctr = 0;
+
+                //trim list.
+                for (int i = 0; i < TableList.Count; ++i)
+                {
+                    WeakReference wr = TableList[i];
+
+                    if (wr.Target != null)
+                        TableList[ctr++] = wr;
+                }
+
+                TableList.RemoveRange(ctr, TableList.Count - ctr);
+
+                //check live tables on alternative threads.
+                _TablesToBeCleaned = ctr;
+                
+                for (int i = 0; i < ctr; ++i)
+                    ThreadPool.QueueUserWorkItem( new WaitCallback( CleanTable ), TableList[i].Target );
+            }
+        }
 
         #endregion
 

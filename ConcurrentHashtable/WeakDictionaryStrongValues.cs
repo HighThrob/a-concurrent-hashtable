@@ -7,11 +7,11 @@ namespace ConcurrentHashtable
 {
     public struct WeakDictionaryStrongValuesItem<TValue>
     {
-        internal Int32 _Hash;
+        internal UInt32 _Hash;
         internal WeakReference _Key;
         internal TValue _Value;
 
-        internal WeakDictionaryStrongValuesItem(Int32 hash, WeakReference key, TValue value )
+        internal WeakDictionaryStrongValuesItem(UInt32 hash, WeakReference key, TValue value)
         {
             _Hash = hash;
             _Key = key;
@@ -21,10 +21,10 @@ namespace ConcurrentHashtable
 
     public struct WeakDictionaryStrongValuesKey<TKey>
     {
-        internal Int32 _Hash;
+        internal UInt32 _Hash;
         internal TKey _Key;
 
-        internal WeakDictionaryStrongValuesKey(Int32 hash, TKey key )
+        internal WeakDictionaryStrongValuesKey(UInt32 hash, TKey key)
         {
             _Hash = hash;
             _Key = key;
@@ -59,10 +59,10 @@ namespace ConcurrentHashtable
 
         #region Traits
 
-        internal protected override int GetHashCode(ref WeakDictionaryStrongValuesItem<TValue> item)
+        internal protected override UInt32 GetHashCode(ref WeakDictionaryStrongValuesItem<TValue> item)
         { return item._Hash; }
 
-        internal protected override int GetHashCode(ref WeakDictionaryStrongValuesKey<TKey> key)
+        internal protected override UInt32 GetHashCode(ref WeakDictionaryStrongValuesKey<TKey> key)
         { return key._Hash; }
 
         internal protected override bool Equals(ref WeakDictionaryStrongValuesItem<TValue> item, ref WeakDictionaryStrongValuesKey<TKey> key)
@@ -114,7 +114,7 @@ namespace ConcurrentHashtable
 
         public IEqualityComparer<TKey> _Comparer;
 
-        Int32 GetHashCode(TKey key)
+        UInt32 GetHashCode(TKey key)
         { return Hasher.Rehash(_Comparer.GetHashCode(key)); }
 
         #region Public accessors
@@ -130,7 +130,7 @@ namespace ConcurrentHashtable
             if (key == null)
                 throw new ArgumentNullException("key");
 
-            var item = new WeakDictionaryStrongValuesItem<TValue>(GetHashCode(key), new WeakReference(key), value );
+            var item = new WeakDictionaryStrongValuesItem<TValue>(GetHashCode(key), new WeakReference(key), value);
             WeakDictionaryStrongValuesItem<TValue> oldItem;
             base.InsertItem(ref item, out oldItem);
         }
@@ -258,7 +258,7 @@ namespace ConcurrentHashtable
                 return
                     Items
                     .Select(item => (TKey)item._Key.Target )
-                    .Where(key => comparer.Equals(key, null))
+                    .Where(key => !comparer.Equals(key, null))
                     .ToArray();
         }
 

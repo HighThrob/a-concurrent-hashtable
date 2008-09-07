@@ -21,8 +21,8 @@ namespace ConcurrentHashtable
         Segment<TStored, TSearch>[] _Segments;
         Int32 _Shift;
 
-        public Segment<TStored, TSearch> GetSegment(Int32 hash)
-        { return _Segments[(uint)hash >> _Shift]; }
+        public Segment<TStored, TSearch> GetSegment(UInt32 hash)
+        { return _Segments[hash >> _Shift]; }
 
         public Segment<TStored, TSearch> GetSegmentByIndex(Int32 index)
         { return _Segments[index]; }
