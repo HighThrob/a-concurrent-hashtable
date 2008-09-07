@@ -44,9 +44,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="WeakDictionaryStrongValuesTest.cs" />
+    <Compile Include="WeakDictionaryStrongKeysTest.cs" />
+    <Compile Include="DictionaryTest.cs" />
     <Compile Include="HashtableTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SegmentTest.cs" />
+    <Compile Include="WeakDictionaryTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="AuthoringTests.txt" />

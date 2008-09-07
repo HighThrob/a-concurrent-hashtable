@@ -18,8 +18,13 @@ namespace ConcurrentHashtableUnitTest
 
             for (int i = 0; i < 1000; ++i)
             {
-                var h = Hasher.Rehash(EqualityComparer<int>.Default.GetHashCode(Hasher.Rehash(i)));
-                dict.Add(h, prefix + (h & 31).ToString());
+                //var h = Hasher.Rehash(EqualityComparer<int>.Default.GetHashCode(Hasher.Rehash(i)));
+                var h = Hasher.Rehash(i);
+
+                unchecked
+                {
+                    dict.Add((int)h, prefix + (h & 31).ToString());
+                }
             }
 
             return dict;
@@ -34,8 +39,13 @@ namespace ConcurrentHashtableUnitTest
 
             for (int i = 1000; i < 2000; ++i)
             {
-                var h = Hasher.Rehash(EqualityComparer<int>.Default.GetHashCode(Hasher.Rehash(i)));
-                dict.Add(h, "STR:" + (h & 31).ToString());
+                //var h = Hasher.Rehash(EqualityComparer<int>.Default.GetHashCode(Hasher.Rehash(i)));
+                var h = Hasher.Rehash(i);
+
+                unchecked
+                {
+                    dict.Add((int)h, "STR:" + (h & 31).ToString());
+                }
             }
 
             return dict;
@@ -56,16 +66,16 @@ namespace ConcurrentHashtableUnitTest
 
             readonly IEqualityComparer<int> _Comparer;
 
-            internal protected override int GetHashCode(ref KeyValuePair<int, string>? item)
+            internal protected override UInt32 GetHashCode(ref KeyValuePair<int, string>? item)
             {
-                //return item.HasValue ? Hasher.Rehash(_Comparer.GetHashCode(item.Value.Key)) : 0;
-                return item.HasValue ? item.Value.Key : 0;
+                return item.HasValue ? Hasher.Rehash(_Comparer.GetHashCode(item.Value.Key)) : 0;
+                //return item.HasValue ? item.Value.Key : 0;
             }
 
-            internal protected override int GetHashCode(ref int key)
+            internal protected override UInt32 GetHashCode(ref int key)
             {
-                //return Hasher.Rehash(_Comparer.GetHashCode(key));
-                return key;
+                return Hasher.Rehash(_Comparer.GetHashCode(key));
+                //return key;
             }
 
             internal protected override bool Equals(ref KeyValuePair<int, string>? item, ref int key)
@@ -174,6 +184,46 @@ namespace ConcurrentHashtableUnitTest
             }
 
             Assert.AreEqual(0, filler.Count, "Expected all items to be returned by iterator.");
+
+            //inserting from multiple threads.
+            filler = GetFiller();
+            stub = new HashtableStub();
+            int runningThreads = 10;
+
+            for (int i = 0; i < 10; ++i)
+            {
+                System.Threading.ThreadPool.QueueUserWorkItem(
+                    new WaitCallback(
+                        delegate(object tgt)
+                        {
+                            int j = 0;
+
+                            foreach (var kvp in filler)
+                            {
+                                KeyValuePair<int, string>? newItem = kvp;
+                                KeyValuePair<int, string>? replacedItem;
+
+                                stub.InsertItem(ref newItem, out replacedItem);
+
+                                if (j == i)
+                                {
+                                    j = 0;
+                                    Thread.Sleep(0);
+                                }
+                                else
+                                    ++j;
+                            }
+
+                            Interlocked.Decrement(ref runningThreads);
+                        }
+                    )
+                );
+            }
+
+            Thread.Sleep(1000); // 1 sec.. enough?
+
+            Assert.AreEqual(0, runningThreads, "Expected all threads to be finished by now.");
+            Assert.AreEqual(filler.Count, stub.Count, "Expected Count to be equal to number of unique inserted items.");
         }
 
         [TestMethod]
@@ -285,6 +335,45 @@ namespace ConcurrentHashtableUnitTest
                     Assert.IsFalse(stub.FindItem(ref key, out foundItem), "Expected return false on find on NOT inserted key, even after GC.");
                 }
             }
+
+            //finding int multiple threads.
+            filler = GetFiller();
+            int runningThreads = 10;
+
+            for (int i = 0; i < 10; ++i)
+            {
+                System.Threading.ThreadPool.QueueUserWorkItem(
+                    new WaitCallback(
+                        delegate(object tgt)
+                        {
+                            int j = 0;
+                            var set = i % 2 == 0 ? filler : tiller;
+
+                            foreach (var kvp in set)
+                            {
+                                int key = kvp.Key;
+                                KeyValuePair<int, string>? foundItem;
+
+                                Assert.IsTrue((set == filler) == stub.FindItem(ref key, out foundItem), "Expected return true on find on inserted key, even after GC and on multiple threads.");
+
+                                if (j == i)
+                                {
+                                    j = 0;
+                                    Thread.Sleep(0);
+                                }
+                                else
+                                    ++j;
+                            }
+
+                            Interlocked.Decrement(ref runningThreads);
+                        }
+                    )
+                );
+            }
+
+            Thread.Sleep(1000); // 1 sec.. enough?
+
+            Assert.AreEqual(0, runningThreads, "Expected all threads to be finished by now.");
         }
 
         [TestMethod]
@@ -332,6 +421,45 @@ namespace ConcurrentHashtableUnitTest
                 Assert.IsTrue(replacedItem.HasValue, "Expected valid item as original item, even after GC.");
                 Assert.AreNotEqual(kvp, replacedItem.Value, "Expected replaced item to be original item, even after GC.");
             }
+
+            //finding int multiple threads.
+            stub = new HashtableStub();
+            int runningThreads = 10;
+
+            for (int i = 0; i < 10; ++i)
+            {
+                System.Threading.ThreadPool.QueueUserWorkItem(
+                    new WaitCallback(
+                        delegate(object tgt)
+                        {
+                            int j = 0;
+                            var set = i % 2 == 0 ? filler : tiller;
+
+                            foreach (var kvp in set)
+                            {
+                                KeyValuePair<int, string>? newItem = kvp;
+                                KeyValuePair<int, string>? replacedItem;
+
+                                stub.GetOldestItem(ref newItem, out replacedItem);
+
+                                if (j == i)
+                                {
+                                    j = 0;
+                                    Thread.Sleep(0);
+                                }
+                                else
+                                    ++j;
+                            }
+
+                            Interlocked.Decrement(ref runningThreads);
+                        }
+                    )
+                );
+            }
+
+            Thread.Sleep(1000); // 1 sec.. enough?
+
+            Assert.AreEqual(0, runningThreads, "Expected all threads to be finished by now.");
         }
 
         [TestMethod]
@@ -390,6 +518,58 @@ namespace ConcurrentHashtableUnitTest
             }
 
             Assert.AreEqual(0, stub.Count, "Expected Count to be 0 after all inserted items removed, even after GC.");
+
+            //removing by multiple threads.
+            foreach (var kvp in filler)
+            {
+                KeyValuePair<int, string>? newItem = kvp;
+                KeyValuePair<int, string>? replacedItem;
+
+                Assert.IsFalse(stub.InsertItem(ref newItem, out replacedItem), "All unique item inserts, expected false returned by GetOldestItem");
+                Assert.AreEqual(kvp, replacedItem.Value, "Expected oldest item to be equal to inserted item.");
+            }
+
+            stub = new HashtableStub();
+            int runningThreads = 10;
+
+            for (int i = 0; i < 10; ++i)
+            {
+                System.Threading.ThreadPool.QueueUserWorkItem(
+                    new WaitCallback(
+                        delegate(object tgt)
+                        {
+                            int j = 0;
+
+                            foreach (var kvp in filler)
+                            {
+                                int key = kvp.Key;
+                                KeyValuePair<int, string>? newItem = kvp;
+                                KeyValuePair<int, string>? replacedItem;
+
+                                if (i % 2 == 0)
+                                    stub.InsertItem(ref newItem, out replacedItem);
+                                else
+                                    stub.RemoveItem(ref key, out replacedItem);
+
+                                if (j == i)
+                                {
+                                    j = 0;
+                                    Thread.Sleep(0);
+                                }
+                                else
+                                    ++j;
+                            }
+
+                            Interlocked.Decrement(ref runningThreads);
+                        }
+                    )
+                );
+            }
+
+            Thread.Sleep(1000); // 1 sec.. enough?
+
+            Assert.AreEqual(0, runningThreads, "Expected all threads to be finished by now.");
+
         }
 
         [TestMethod]

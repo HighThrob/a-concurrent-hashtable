@@ -36,8 +36,8 @@ namespace ConcurrentHashtable
 
         #region Traits
 
-        internal protected abstract Int32 GetHashCode(ref TStored item);
-        internal protected abstract Int32 GetHashCode(ref TSearch key);
+        internal protected abstract UInt32 GetHashCode(ref TStored item);
+        internal protected abstract UInt32 GetHashCode(ref TSearch key);
         internal protected abstract bool Equals(ref TStored item, ref TSearch key);
         internal protected abstract bool Equals(ref TStored item1, ref TStored item2);
 
@@ -84,7 +84,7 @@ namespace ConcurrentHashtable
         /// </summary>
         /// <param name="hash"></param>
         /// <returns></returns>
-        Segment<TStored, TSearch> GetSegment(Int32 hash)
+        Segment<TStored, TSearch> GetSegment(UInt32 hash)
         { return ((UInt32)hash < (UInt32)_SwitchPoint ? _NewRange : _CurrentRange).GetSegment(hash); }
 
         /// <summary>
@@ -93,7 +93,7 @@ namespace ConcurrentHashtable
         /// </summary>
         /// <param name="hash"></param>
         /// <returns></returns>
-        Segment<TStored, TSearch> GetLockedSegment(Int32 hash)
+        Segment<TStored, TSearch> GetLockedSegment(UInt32 hash)
         {
             //If we can't get the lock directly re-aquire the segment.
             while (true)
@@ -306,14 +306,14 @@ namespace ConcurrentHashtable
 
 
                 //calculate the step sizes for our switch points            
-                Int32 currentSwitchPointStep = 1 << _CurrentRange.Shift;
-                Int32 newSwitchPointStep = 1 << newRange.Shift;
+                var currentSwitchPointStep = (UInt32)(1 << _CurrentRange.Shift);
+                var newSwitchPointStep = (UInt32)(1 << newRange.Shift);
 
                 //position in new range up from where the new segments are locked
-                Int32 newLockedPoint = 0;
+                var newLockedPoint = (UInt32)0;
 
                 //At this moment _SwitchPoint should be 0
-                Int32 switchPoint = _SwitchPoint;
+                var switchPoint = (UInt32)_SwitchPoint;
 
                 do
                 {
@@ -331,7 +331,7 @@ namespace ConcurrentHashtable
 
                     while ((it = currentSegment.GetNextItem(it, out currentKey, this)) >= 0)
                     {
-                        Int32 currentKeyHash = this.GetHashCode(ref currentKey);
+                        var currentKeyHash = this.GetHashCode(ref currentKey);
 
                         //get the new segment. this is already locked.
                         var newSegment = _NewRange.GetSegment(currentKeyHash);
@@ -351,14 +351,19 @@ namespace ConcurrentHashtable
                     }
 
                     //advance _SwitchPoint
-                    switchPoint = Interlocked.Add(ref _SwitchPoint, currentSwitchPointStep);
+                    switchPoint = (UInt32)Interlocked.Add(ref _SwitchPoint, (Int32)currentSwitchPointStep);
 
                     //release lock of new segments upto the point where we can still add new items
                     //during this migration.
-                    while ((UInt32)newLockedPoint + (UInt32)newSwitchPointStep <= (UInt32)switchPoint)
+                    while (true)
                     {
+                        var nextNewLockedPoint = newLockedPoint + newSwitchPointStep;
+
+                        if (nextNewLockedPoint > switchPoint || nextNewLockedPoint == 0)
+                            break;
+
                         newRange.GetSegment(newLockedPoint).Unlock();
-                        newLockedPoint += newSwitchPointStep;
+                        newLockedPoint = nextNewLockedPoint;
                     }
                 }
                 while (switchPoint != 0);

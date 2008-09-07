@@ -24,9 +24,9 @@ namespace ConcurrentHashtable
 
         public bool FindItem(ref TSearch key, out TStored item, Hashtable<TStored, TSearch> traits)
         {
-            Int32 searchHash = traits.GetHashCode(ref key);
-            Int32 mask = _List.Length - 1;
-            Int32 i = searchHash & mask;
+            var searchHash = traits.GetHashCode(ref key);
+            var mask = (UInt32)(_List.Length - 1);
+            var i = searchHash & mask;
 
             if (traits.IsEmpty(ref _List[i]))
             {
@@ -60,9 +60,9 @@ namespace ConcurrentHashtable
 
         public bool GetOldestItem(ref TStored key, out TStored item, Hashtable<TStored, TSearch> traits)
         {
-            Int32 searchHash = traits.GetHashCode(ref key);
-            Int32 mask = _List.Length - 1;
-            Int32 i = searchHash & mask;
+            var searchHash = traits.GetHashCode(ref key);
+            var mask = (UInt32)(_List.Length - 1);
+            var i = searchHash & mask;
 
             if (traits.IsEmpty(ref _List[i]))
                 goto empty_spot;
@@ -104,9 +104,9 @@ namespace ConcurrentHashtable
 
         public bool InsertItem(ref TStored key, out TStored item, Hashtable<TStored, TSearch> traits)
         {
-            Int32 searchHash = traits.GetHashCode(ref key);
-            Int32 mask = _List.Length - 1;
-            Int32 i = searchHash & mask;
+            var searchHash = traits.GetHashCode(ref key);
+            var mask = (UInt32)(_List.Length - 1);
+            var i = searchHash & mask;
 
             if (traits.IsEmpty(ref _List[i]))
                 goto empty_spot;
@@ -150,9 +150,9 @@ namespace ConcurrentHashtable
 
         public bool RemoveItem(ref TSearch key, out TStored item, Hashtable<TStored, TSearch> traits)
         {
-            Int32 searchHash = traits.GetHashCode(ref key);
-            Int32 mask = _List.Length - 1;
-            Int32 i = searchHash & mask;
+            var searchHash = traits.GetHashCode(ref key);
+            var mask = (UInt32)(_List.Length - 1);
+            var i = searchHash & mask;
 
             if (traits.IsEmpty(ref _List[i]))
             {
@@ -219,7 +219,7 @@ namespace ConcurrentHashtable
         /// <param name="traits">The <see cref="Hashtable{TStored,TSearch}"/> that determines how to treat each individual item.</param>
         public void DisposeGarbage(Hashtable<TStored, TSearch> traits)
         {
-            for (int i = 0, end = _List.Length; i != end; ++i)
+            for ( UInt32 i = 0, end = (UInt32)(_List.Length); i != end; ++i)
             {
                 while (traits.IsGarbage(ref _List[i]))
                     RemoveAtIndex(i, traits); 
@@ -236,10 +236,11 @@ namespace ConcurrentHashtable
             Interlocked.Exchange(ref _Token, 0);
         }
 
-        private void RemoveAtIndex(int index, Hashtable<TStored, TSearch> traits)
+        private void RemoveAtIndex(UInt32 index, Hashtable<TStored, TSearch> traits)
         {
-            Int32 mask = _List.Length - 1;
-            int i = index, j = (index + 1) & mask;
+            var mask = (UInt32)(_List.Length - 1);
+            var i = index;
+            var j = (index + 1) & mask;
 
             while(true)
             {
@@ -287,7 +288,7 @@ namespace ConcurrentHashtable
 
         private void DirectInsert(ref TStored item, Hashtable<TStored, TSearch> traits)
         {
-            var mask = _List.Length - 1;
+            var mask = (UInt32)(_List.Length - 1);
             var searchHash = traits.GetHashCode(ref item);
             var i = searchHash & mask;
 
@@ -321,7 +322,7 @@ namespace ConcurrentHashtable
             }
         }
 
-        private void InsertItemAtIndex(int mask, int i, TStored itemCopy, Hashtable<TStored, TSearch> traits)
+        private void InsertItemAtIndex(UInt32 mask, UInt32 i, TStored itemCopy, Hashtable<TStored, TSearch> traits)
         {
             while (true)
             {

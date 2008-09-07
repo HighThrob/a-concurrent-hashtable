@@ -69,14 +69,14 @@ namespace ConcurrentHashtableUnitTest
 
             #region ISegmentTraits<long?,int> Members
 
-            internal protected override int GetHashCode(ref long? storedItem)
+            internal protected override UInt32 GetHashCode(ref long? storedItem)
             {
-                return storedItem.GetHashCode();
+                return (UInt32)storedItem.GetHashCode();
             }
 
-            internal protected override int GetHashCode(ref int searchKey)
+            internal protected override UInt32 GetHashCode(ref int searchKey)
             {
-                return ((long?)searchKey).GetHashCode();
+                return (UInt32)((long?)searchKey).GetHashCode();
             }
 
             internal protected override bool Equals(ref long? storedItem, ref int searchKey)

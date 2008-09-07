@@ -5,6 +5,26 @@ using System.Text;
 
 namespace ConcurrentHashtable
 {
+    public struct DictionaryKey<TKey, TValue>
+    {
+        internal TKey _Key;
+        internal TValue _Value;
+        internal bool _IgnoreValue;
+
+        internal DictionaryKey(TKey key)
+        {
+            _Key = key;
+            _IgnoreValue = true;
+            _Value = default(TValue);
+        }
+
+        internal DictionaryKey(TKey key, TValue value)
+        {
+            _Key = key;
+            _IgnoreValue = false ;
+            _Value = value;
+        }
+    }
     /// <summary>
     /// A Concurrent <see cref="IDictionary{TKey,TValue}"/> implementation.
     /// </summary>
@@ -17,7 +37,7 @@ namespace ConcurrentHashtable
     /// a set of items based on a hash of those items. The more segments there are and the beter the hash, the fewer collisions will occur.
     /// This means that a nearly empty Dictionary is not as concurrent as one containing many items. 
     /// </remarks>
-    public sealed class Dictionary<TKey,TValue> : Hashtable<KeyValuePair<TKey,TValue>?,TKey>, IDictionary<TKey,TValue> 
+    public sealed class Dictionary<TKey, TValue> : Hashtable<KeyValuePair<TKey, TValue>?, DictionaryKey<TKey, TValue>>, IDictionary<TKey, TValue> 
     {
         const int MinSegments = 16;
         const int SegmentFill = 16;
@@ -45,14 +65,14 @@ namespace ConcurrentHashtable
 
         readonly IEqualityComparer<TKey> _Comparer;
 
-        internal protected override int GetHashCode(ref KeyValuePair<TKey, TValue>? item)
+        internal protected override UInt32 GetHashCode(ref KeyValuePair<TKey, TValue>? item)
         { return item.HasValue ? Hasher.Rehash(_Comparer.GetHashCode(item.Value.Key)) : 0; }
 
-        internal protected override int GetHashCode(ref TKey key)
-        { return Hasher.Rehash(_Comparer.GetHashCode(key)); }
+        internal protected override UInt32 GetHashCode(ref DictionaryKey<TKey, TValue> key)
+        { return Hasher.Rehash(_Comparer.GetHashCode(key._Key)); }
 
-        internal protected override bool Equals(ref KeyValuePair<TKey, TValue>? item, ref TKey key)
-        { return item.HasValue && _Comparer.Equals(item.Value.Key, key); }
+        internal protected override bool Equals(ref KeyValuePair<TKey, TValue>? item, ref DictionaryKey<TKey, TValue> key)
+        { return item.HasValue && _Comparer.Equals(item.Value.Key, key._Key) && (key._IgnoreValue || EqualityComparer<TValue>.Default.Equals(item.Value.Value, key._Value)); }
 
         internal protected override bool Equals(ref KeyValuePair<TKey, TValue>? item1, ref KeyValuePair<TKey, TValue>? item2)
         { return item1.HasValue && item2.HasValue && _Comparer.Equals(item1.Value.Key, item2.Value.Key); }
@@ -93,7 +113,8 @@ namespace ConcurrentHashtable
         public bool ContainsKey(TKey key)
         {
             KeyValuePair<TKey,TValue>? presentItem;
-            return FindItem(ref key, out presentItem);
+            DictionaryKey<TKey, TValue> searchKey = new DictionaryKey<TKey, TValue>(key);
+            return FindItem(ref searchKey, out presentItem);
         }
 
         public ICollection<TKey> Keys
@@ -108,15 +129,27 @@ namespace ConcurrentHashtable
         public bool Remove(TKey key)
         {
             KeyValuePair<TKey, TValue>? oldItem;
-            return base.RemoveItem(ref key, out oldItem);
+            DictionaryKey<TKey,TValue> searchKey = new DictionaryKey<TKey,TValue>(key);
+            return base.RemoveItem(ref searchKey, out oldItem);
         }
 
         public bool TryGetValue(TKey key, out TValue value)
         {
             KeyValuePair<TKey, TValue>? presentItem;
-            var res = FindItem(ref key, out presentItem);
-            value = presentItem.Value.Value;
-            return res;
+            DictionaryKey<TKey, TValue> searchKey = new DictionaryKey<TKey, TValue>(key);
+
+            var res = FindItem(ref searchKey, out presentItem);
+
+            if (res)
+            {
+                value = presentItem.Value.Value;
+                return true;
+            }
+            else
+            {
+                value = default(TValue);
+                return false;
+            }
         }
 
         public ICollection<TValue> Values
@@ -133,7 +166,9 @@ namespace ConcurrentHashtable
             get
             {
                 KeyValuePair<TKey, TValue>? presentItem;
-                if (!FindItem(ref key, out presentItem))
+                DictionaryKey<TKey, TValue> searchKey = new DictionaryKey<TKey, TValue>(key);
+
+                if (!FindItem(ref searchKey, out presentItem))
                     throw new KeyNotFoundException("The property is retrieved and key is not found.");
                 return presentItem.Value.Value;
             }
@@ -164,10 +199,10 @@ namespace ConcurrentHashtable
         public bool Contains(KeyValuePair<TKey, TValue> item)
         {
             KeyValuePair<TKey, TValue>? presentItem;
-            TKey key = item.Key;
-            return 
-                FindItem(ref key, out presentItem) 
-                && EqualityComparer<TValue>.Default.Equals(item.Value, presentItem.Value.Value);
+            DictionaryKey<TKey, TValue> searchKey = new DictionaryKey<TKey, TValue>(item.Key,item.Value);
+
+            return
+                FindItem(ref searchKey, out presentItem);
         }
 
         public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
@@ -184,7 +219,11 @@ namespace ConcurrentHashtable
         { get { return false; } }
 
         public bool Remove(KeyValuePair<TKey, TValue> item)
-        { return Contains(item) && Remove(item.Key); }
+        {
+            KeyValuePair<TKey, TValue>? oldItem;
+            DictionaryKey<TKey, TValue> searchKey = new DictionaryKey<TKey, TValue>(item.Key,item.Value);
+            return base.RemoveItem(ref searchKey, out oldItem);
+        }
 
         #endregion
 
