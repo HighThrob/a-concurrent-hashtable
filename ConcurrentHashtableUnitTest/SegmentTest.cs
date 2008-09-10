@@ -61,7 +61,7 @@ namespace ConcurrentHashtableUnitTest
         #endregion
 
 
-        class SegmentTraits : WeakHashtable<long?, int>
+        class SegmentTraits : ConcurrentWeakHashtable<long?, int>
         {
             internal SegmentTraits()
                 : base()

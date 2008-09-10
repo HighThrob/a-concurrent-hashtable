@@ -50,17 +50,17 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="IMaintainable.cs" />
-    <Compile Include="WeakDictionaryStrongKeys.cs" />
-    <Compile Include="WeakDictionaryStrongValues.cs" />
-    <Compile Include="Dictionary.cs" />
+    <Compile Include="ConcurrentWeakDictionaryStrongKeys.cs" />
+    <Compile Include="ConcurrentWeakDictionaryStrongValues.cs" />
+    <Compile Include="ConcurrentDictionary.cs" />
     <Compile Include="Hasher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Segmentrange.cs" />
     <Compile Include="Segment.cs" />
-    <Compile Include="Hashtable.cs" />
-    <Compile Include="WeakHashtableHelper.cs" />
-    <Compile Include="WeakDictionary.cs" />
-    <Compile Include="WeakHashtable.cs" />
+    <Compile Include="ConcurrentHashtable.cs" />
+    <Compile Include="ConcurrentWeakHashtableHelper.cs" />
+    <Compile Include="ConcurrentWeakDictionary.cs" />
+    <Compile Include="ConcurrentWeakHashtable.cs" />
     <Compile Include="WeakSegment.cs" />
     <Compile Include="WeakSegmentrange.cs" />
   </ItemGroup>

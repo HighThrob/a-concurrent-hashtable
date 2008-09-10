@@ -7,10 +7,10 @@ using System.Threading;
 namespace ConcurrentHashtable
 {
     /// <summary>
-    /// Helper class for WeakHashtable. Makes sure that its DoMaintenance method
+    /// Helper class for ConcurrentWeakHashtable. Makes sure that its DoMaintenance method
     /// is called when the GarbageCollector has collected garbage.
     /// </summary>
-    internal static class WeakHashtableHelper
+    internal static class ConcurrentWeakHashtableHelper
     {
         #region Garbage Collection tracking
 
@@ -21,7 +21,7 @@ namespace ConcurrentHashtable
         class GCSpy
         {
             ~GCSpy()
-            { WeakHashtableHelper.VerifyGCDetected(null); }
+            { ConcurrentWeakHashtableHelper.VerifyGCDetected(null); }
         }
 
         /// <summary>
@@ -138,7 +138,7 @@ namespace ConcurrentHashtable
         static List<WeakReference> _TableList = new List<WeakReference>();
 
         /// <summary>
-        /// this is to be called from the constructor or initializer of a WeakHashtable instance
+        /// this is to be called from the constructor or initializer of a ConcurrentWeakHashtable instance
         /// </summary>
         internal static void Register(IMaintainable table)
         {

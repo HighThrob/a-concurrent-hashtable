@@ -45,13 +45,13 @@ namespace ConcurrentHashtable
 
         internal TStored[] _List;
 
-        public void Welcome(Hashtable<TStored, TSearch> traits)
+        public void Welcome(ConcurrentHashtable<TStored, TSearch> traits)
         { traits.EffectTotalAllocatedSpace(_List.Length); }
 
-        public void Bye(Hashtable<TStored, TSearch> traits)
+        public void Bye(ConcurrentHashtable<TStored, TSearch> traits)
         { traits.EffectTotalAllocatedSpace(-_List.Length); }
 
-        public bool FindItem(ref TSearch key, out TStored item, Hashtable<TStored, TSearch> traits)
+        public bool FindItem(ref TSearch key, out TStored item, ConcurrentHashtable<TStored, TSearch> traits)
         {
             var searchHash = traits.GetHashCode(ref key);
             var mask = (UInt32)(_List.Length - 1);
@@ -87,7 +87,7 @@ namespace ConcurrentHashtable
             }
         }
 
-        public bool GetOldestItem(ref TStored key, out TStored item, Hashtable<TStored, TSearch> traits)
+        public bool GetOldestItem(ref TStored key, out TStored item, ConcurrentHashtable<TStored, TSearch> traits)
         {
             var searchHash = traits.GetHashCode(ref key);
             var mask = (UInt32)(_List.Length - 1);
@@ -131,7 +131,7 @@ namespace ConcurrentHashtable
             return false;
         }
 
-        public bool InsertItem(ref TStored key, out TStored item, Hashtable<TStored, TSearch> traits)
+        public bool InsertItem(ref TStored key, out TStored item, ConcurrentHashtable<TStored, TSearch> traits)
         {
             var searchHash = traits.GetHashCode(ref key);
             var mask = (UInt32)(_List.Length - 1);
@@ -177,7 +177,7 @@ namespace ConcurrentHashtable
             return false;
         }
 
-        public bool RemoveItem(ref TSearch key, out TStored item, Hashtable<TStored, TSearch> traits)
+        public bool RemoveItem(ref TSearch key, out TStored item, ConcurrentHashtable<TStored, TSearch> traits)
         {
             var searchHash = traits.GetHashCode(ref key);
             var mask = (UInt32)(_List.Length - 1);
@@ -221,7 +221,7 @@ namespace ConcurrentHashtable
             }
         }
 
-        public int GetNextItem(int beyond, out TStored item, Hashtable<TStored, TSearch> traits)
+        public int GetNextItem(int beyond, out TStored item, ConcurrentHashtable<TStored, TSearch> traits)
         {
             for (int end = _List.Length; ++beyond < end;)
             {
@@ -236,7 +236,7 @@ namespace ConcurrentHashtable
             return -1;
         }
 
-        public void Clear(Hashtable<TStored, TSearch> traits)
+        public void Clear(ConcurrentHashtable<TStored, TSearch> traits)
         {
             _List = new TStored[4];
             _Count = 0;
@@ -252,7 +252,7 @@ namespace ConcurrentHashtable
             Interlocked.Exchange(ref _Token, 0);
         }
 
-        protected void RemoveAtIndex(UInt32 index, Hashtable<TStored, TSearch> traits)
+        protected void RemoveAtIndex(UInt32 index, ConcurrentHashtable<TStored, TSearch> traits)
         {
             var mask = (UInt32)(_List.Length - 1);
             var i = index;
@@ -273,7 +273,7 @@ namespace ConcurrentHashtable
             }            
         }
 
-        protected void DecrementCount(Hashtable<TStored, TSearch> traits)
+        protected void DecrementCount(ConcurrentHashtable<TStored, TSearch> traits)
         { DecrementCount(traits, 1); }
 
         Int32 GetPreferedListLength()
@@ -286,7 +286,7 @@ namespace ConcurrentHashtable
             return newListLength << 1;
         }
 
-        protected void DecrementCount(Hashtable<TStored, TSearch> traits, int amount)
+        protected void DecrementCount(ConcurrentHashtable<TStored, TSearch> traits, int amount)
         {
             var oldListLength = _List.Length;
             _Count -= amount;
@@ -307,7 +307,7 @@ namespace ConcurrentHashtable
             }
         }
 
-        private void IncrementCount(Hashtable<TStored, TSearch> traits)
+        private void IncrementCount(ConcurrentHashtable<TStored, TSearch> traits)
         {
             var oldListLength = _List.Length;
 
@@ -328,7 +328,7 @@ namespace ConcurrentHashtable
         }
 
 
-        private void DirectInsert(ref TStored item, Hashtable<TStored, TSearch> traits)
+        private void DirectInsert(ref TStored item, ConcurrentHashtable<TStored, TSearch> traits)
         {
             var mask = (UInt32)(_List.Length - 1);
             var searchHash = traits.GetHashCode(ref item);
@@ -364,7 +364,7 @@ namespace ConcurrentHashtable
             }
         }
 
-        private void InsertItemAtIndex(UInt32 mask, UInt32 i, TStored itemCopy, Hashtable<TStored, TSearch> traits)
+        private void InsertItemAtIndex(UInt32 mask, UInt32 i, TStored itemCopy, ConcurrentHashtable<TStored, TSearch> traits)
         {
             while (true)
             {
@@ -385,7 +385,7 @@ namespace ConcurrentHashtable
             }
         }
 
-        internal void Trim(Hashtable<TStored, TSearch> traits)
+        internal void Trim(ConcurrentHashtable<TStored, TSearch> traits)
         { DecrementCount(traits, 0); }
     }
 }

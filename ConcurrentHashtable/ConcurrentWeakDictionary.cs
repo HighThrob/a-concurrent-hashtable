@@ -6,15 +6,15 @@ using System.Text;
 namespace ConcurrentHashtable
 {
     /// <summary>
-    /// Entry item for WeakDictionary
+    /// Entry item for ConcurrentWeakDictionary
     /// </summary>
-    public struct WeakDictionaryItem
+    public struct ConcurrentWeakDictionaryItem
     {
         internal UInt32 _Hash;
         internal WeakReference _Key;
         internal WeakReference _Value;
 
-        internal WeakDictionaryItem(UInt32 hash, WeakReference key, WeakReference value)
+        internal ConcurrentWeakDictionaryItem(UInt32 hash, WeakReference key, WeakReference value)
         {
             _Hash = hash;
             _Key = key;
@@ -23,15 +23,15 @@ namespace ConcurrentHashtable
     }
 
     /// <summary>
-    /// Search key for WeakDictionary
+    /// Search key for ConcurrentWeakDictionary
     /// </summary>
     /// <typeparam name="TKey"></typeparam>
-    public struct WeakDictionaryKey<TKey>
+    public struct ConcurrentWeakDictionaryKey<TKey>
     {
         internal UInt32 _Hash;
         internal TKey _Key;
 
-        internal WeakDictionaryKey(UInt32 hash, TKey key)
+        internal ConcurrentWeakDictionaryKey(UInt32 hash, TKey key)
         {
             _Hash = hash;
             _Key = key;
@@ -44,24 +44,24 @@ namespace ConcurrentHashtable
     /// </summary>
     /// <typeparam name="TKey">Type of the keys. This must be a reference type.</typeparam>
     /// <typeparam name="TValue">Type of the values. This must be a reference type.</typeparam>
-    public sealed class WeakDictionary<TKey, TValue> : WeakHashtable<WeakDictionaryItem, WeakDictionaryKey<TKey>>
+    public sealed class ConcurrentWeakDictionary<TKey, TValue> : ConcurrentWeakHashtable<ConcurrentWeakDictionaryItem, ConcurrentWeakDictionaryKey<TKey>>
         where TKey : class
         where TValue : class
     {
         #region Constructors
 
         /// <summary>
-        /// Instantiates a WeakDictionary with the default comparer for <typeparamref name="TKey"/>.
+        /// Instantiates a ConcurrentWeakDictionary with the default comparer for <typeparamref name="TKey"/>.
         /// </summary>
-        public WeakDictionary()
+        public ConcurrentWeakDictionary()
             : this(EqualityComparer<TKey>.Default)
         { }
 
         /// <summary>
-        /// Instatiates a WeakDictionary with an explicit comparer for <typeparamref name="TKey"/>.
+        /// Instatiates a ConcurrentWeakDictionary with an explicit comparer for <typeparamref name="TKey"/>.
         /// </summary>
         /// <param name="comparer">An <see cref="IEqualityComparer{TKey}"/> to comparer keys.</param>
-        public WeakDictionary(IEqualityComparer<TKey> comparer)
+        public ConcurrentWeakDictionary(IEqualityComparer<TKey> comparer)
             : base()
         {
             if (comparer == null)
@@ -76,19 +76,19 @@ namespace ConcurrentHashtable
 
         #region Traits
 
-        internal protected override UInt32 GetHashCode(ref WeakDictionaryItem item)
+        internal protected override UInt32 GetHashCode(ref ConcurrentWeakDictionaryItem item)
         { return item._Hash; }
 
-        internal protected override UInt32 GetHashCode(ref WeakDictionaryKey<TKey> key)
+        internal protected override UInt32 GetHashCode(ref ConcurrentWeakDictionaryKey<TKey> key)
         { return key._Hash; }
 
-        internal protected override bool Equals(ref WeakDictionaryItem item, ref WeakDictionaryKey<TKey> key)
+        internal protected override bool Equals(ref ConcurrentWeakDictionaryItem item, ref ConcurrentWeakDictionaryKey<TKey> key)
         {
             var key1 = (TKey)item._Key.Target;
             return _Comparer.Equals(key1, key._Key);
         }
 
-        internal protected override bool Equals(ref WeakDictionaryItem item1, ref WeakDictionaryItem item2)
+        internal protected override bool Equals(ref ConcurrentWeakDictionaryItem item1, ref ConcurrentWeakDictionaryItem item2)
         {
             var key1 = (TKey)item1._Key.Target;
             var key2 = (TKey)item2._Key.Target;
@@ -96,14 +96,14 @@ namespace ConcurrentHashtable
             return key1 == null && key2 == null ? item1._Key == item2._Key : _Comparer.Equals(key1, key2);
         }
 
-        internal protected override bool IsEmpty(ref WeakDictionaryItem item)
+        internal protected override bool IsEmpty(ref ConcurrentWeakDictionaryItem item)
         { return item._Key == null; }
 
-        internal protected override bool IsGarbage(ref WeakDictionaryItem item)
+        internal protected override bool IsGarbage(ref ConcurrentWeakDictionaryItem item)
         { return item._Key != null && ( item._Key.Target == null || (item._Value != null && item._Value.Target == null) ); }
 
-        internal protected override WeakDictionaryItem EmptyItem
-        { get { return default(WeakDictionaryItem); } }
+        internal protected override ConcurrentWeakDictionaryItem EmptyItem
+        { get { return default(ConcurrentWeakDictionaryItem); } }
 
 
         #endregion
@@ -125,8 +125,8 @@ namespace ConcurrentHashtable
             if (key == null)
                 throw new ArgumentNullException("key");
 
-            var item = new WeakDictionaryItem(GetHashCode(key), new WeakReference(key), value == null ? null : new WeakReference(value));
-            WeakDictionaryItem oldItem;
+            var item = new ConcurrentWeakDictionaryItem(GetHashCode(key), new WeakReference(key), value == null ? null : new WeakReference(value));
+            ConcurrentWeakDictionaryItem oldItem;
             base.InsertItem(ref item, out oldItem);
         }
 
@@ -141,8 +141,8 @@ namespace ConcurrentHashtable
             if (key == null)
                 throw new ArgumentNullException("key");
 
-            var item = new WeakDictionaryItem(GetHashCode(key), new WeakReference(key), newValue == null ? null : new WeakReference(newValue));
-            WeakDictionaryItem oldItem;
+            var item = new ConcurrentWeakDictionaryItem(GetHashCode(key), new WeakReference(key), newValue == null ? null : new WeakReference(newValue));
+            ConcurrentWeakDictionaryItem oldItem;
             TValue res;
 
             do
@@ -168,8 +168,8 @@ namespace ConcurrentHashtable
             if (key == null)
                 throw new ArgumentNullException("key");
 
-            var item = new WeakDictionaryKey<TKey>(GetHashCode(key), key);
-            WeakDictionaryItem oldItem;
+            var item = new ConcurrentWeakDictionaryKey<TKey>(GetHashCode(key), key);
+            ConcurrentWeakDictionaryItem oldItem;
 
             base.RemoveItem(ref item, out oldItem);
         }
@@ -185,8 +185,8 @@ namespace ConcurrentHashtable
             if (key == null)
                 throw new ArgumentNullException("key");
 
-            var item = new WeakDictionaryKey<TKey>(GetHashCode(key), key);
-            WeakDictionaryItem oldItem;
+            var item = new ConcurrentWeakDictionaryKey<TKey>(GetHashCode(key), key);
+            ConcurrentWeakDictionaryItem oldItem;
 
             if (base.FindItem(ref item, out oldItem))
             {
@@ -218,8 +218,8 @@ namespace ConcurrentHashtable
             if (key == null)
                 throw new ArgumentNullException("key");
 
-            var item = new WeakDictionaryKey<TKey>(GetHashCode(key), key);
-            WeakDictionaryItem oldItem;
+            var item = new ConcurrentWeakDictionaryKey<TKey>(GetHashCode(key), key);
+            ConcurrentWeakDictionaryItem oldItem;
 
             if (base.RemoveItem(ref item, out oldItem))
             {

@@ -15,7 +15,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryInsert()
         {
-            var dictionary = new WeakDictionary<object, object>();
+            var dictionary = new ConcurrentWeakDictionary<object, object>();
 
             var key = new object();
             var value = new object();
@@ -47,7 +47,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryGetOldest()
         {
-            var dictionary = new WeakDictionary<object, object>();
+            var dictionary = new ConcurrentWeakDictionary<object, object>();
 
             var key = new object();
             var value = new object();
@@ -77,7 +77,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryRemove()
         {
-            var dictionary = new WeakDictionary<object, object>();
+            var dictionary = new ConcurrentWeakDictionary<object, object>();
 
             var key = new object();
             var value = new object();
@@ -102,7 +102,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryTryGetValue()
         {
-            var dictionary = new WeakDictionary<object, object>();
+            var dictionary = new ConcurrentWeakDictionary<object, object>();
 
             var key = new object();
             var value = new object();
@@ -128,7 +128,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryTryPopValue()
         {
-            var dictionary = new WeakDictionary<object, object>();
+            var dictionary = new ConcurrentWeakDictionary<object, object>();
 
             var key = new object();
             var value = new object();
@@ -154,7 +154,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryIndexer()
         {
-            var dictionary = new WeakDictionary<object, object>();
+            var dictionary = new ConcurrentWeakDictionary<object, object>();
 
             var key1 = new object();
             var value1 = new object();
@@ -180,7 +180,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryCurrentValues()
         {
-            var dictionary = new WeakDictionary<object, object>();
+            var dictionary = new ConcurrentWeakDictionary<object, object>();
 
             var key1 = new object();
             object value1 = null;
@@ -199,7 +199,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryCurrentKeys()
         {
-            var dictionary = new WeakDictionary<object, object>();
+            var dictionary = new ConcurrentWeakDictionary<object, object>();
 
             var key1 = new object();
             object value1 = null;
@@ -218,7 +218,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryClear()
         {
-            var dictionary = new WeakDictionary<object, object>();
+            var dictionary = new ConcurrentWeakDictionary<object, object>();
 
             var key1 = new object();
             object value1 = null;
@@ -239,7 +239,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryGarbageCollection()
         {
-            var dictionary = new WeakDictionary<object, object>();
+            var dictionary = new ConcurrentWeakDictionary<object, object>();
 
             for (int i = 0; i < 1000; ++i)
                 dictionary[new Object()] = new object();
