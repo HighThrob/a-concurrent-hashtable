@@ -6,9 +6,9 @@ using System.Threading;
 
 namespace ConcurrentHashtable
 {
-    public abstract class Hashtable<TStored, TSearch>
+    public abstract class ConcurrentHashtable<TStored, TSearch>
     {
-        protected Hashtable()
+        protected ConcurrentHashtable()
         {}
 
         protected virtual void Initialize()

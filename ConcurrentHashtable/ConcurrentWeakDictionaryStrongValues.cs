@@ -5,13 +5,13 @@ using System.Text;
 
 namespace ConcurrentHashtable
 {
-    public struct WeakDictionaryStrongValuesItem<TValue>
+    public struct ConcurrentWeakDictionaryStrongValuesItem<TValue>
     {
         internal UInt32 _Hash;
         internal WeakReference _Key;
         internal TValue _Value;
 
-        internal WeakDictionaryStrongValuesItem(UInt32 hash, WeakReference key, TValue value)
+        internal ConcurrentWeakDictionaryStrongValuesItem(UInt32 hash, WeakReference key, TValue value)
         {
             _Hash = hash;
             _Key = key;
@@ -19,12 +19,12 @@ namespace ConcurrentHashtable
         }
     }
 
-    public struct WeakDictionaryStrongValuesKey<TKey>
+    public struct ConcurrentWeakDictionaryStrongValuesKey<TKey>
     {
         internal UInt32 _Hash;
         internal TKey _Key;
 
-        internal WeakDictionaryStrongValuesKey(UInt32 hash, TKey key)
+        internal ConcurrentWeakDictionaryStrongValuesKey(UInt32 hash, TKey key)
         {
             _Hash = hash;
             _Key = key;
@@ -36,16 +36,16 @@ namespace ConcurrentHashtable
     /// </summary>
     /// <typeparam name="TKey">Type of the keys. This must be a reference type.</typeparam>
     /// <typeparam name="TValue">Type of the values.</typeparam>
-    public sealed class WeakDictionaryStrongValues<TKey,TValue> : WeakHashtable<WeakDictionaryStrongValuesItem<TValue>,WeakDictionaryStrongValuesKey<TKey>>
+    public sealed class ConcurrentWeakDictionaryStrongValues<TKey,TValue> : ConcurrentWeakHashtable<ConcurrentWeakDictionaryStrongValuesItem<TValue>,ConcurrentWeakDictionaryStrongValuesKey<TKey>>
         where TKey : class
     {
         #region Constructors
 
-        public WeakDictionaryStrongValues()
+        public ConcurrentWeakDictionaryStrongValues()
             : this(EqualityComparer<TKey>.Default)
         { }
 
-        public WeakDictionaryStrongValues(IEqualityComparer<TKey> comparer)
+        public ConcurrentWeakDictionaryStrongValues(IEqualityComparer<TKey> comparer)
             : base()
         {
             if (comparer == null)
@@ -60,19 +60,19 @@ namespace ConcurrentHashtable
 
         #region Traits
 
-        internal protected override UInt32 GetHashCode(ref WeakDictionaryStrongValuesItem<TValue> item)
+        internal protected override UInt32 GetHashCode(ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item)
         { return item._Hash; }
 
-        internal protected override UInt32 GetHashCode(ref WeakDictionaryStrongValuesKey<TKey> key)
+        internal protected override UInt32 GetHashCode(ref ConcurrentWeakDictionaryStrongValuesKey<TKey> key)
         { return key._Hash; }
 
-        internal protected override bool Equals(ref WeakDictionaryStrongValuesItem<TValue> item, ref WeakDictionaryStrongValuesKey<TKey> key)
+        internal protected override bool Equals(ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item, ref ConcurrentWeakDictionaryStrongValuesKey<TKey> key)
         {
             var key1 = (TKey)item._Key.Target;
             return _Comparer.Equals(key1, key._Key);
         }
 
-        internal protected override bool Equals(ref WeakDictionaryStrongValuesItem<TValue> item1, ref WeakDictionaryStrongValuesItem<TValue> item2)
+        internal protected override bool Equals(ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item1, ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item2)
         {
             var key1 = (TKey)item1._Key.Target;
             var key2 = (TKey)item2._Key.Target;
@@ -80,14 +80,14 @@ namespace ConcurrentHashtable
             return key1 == null && key2 == null ? item1._Key == item2._Key : _Comparer.Equals(key1, key2);
         }
 
-        internal protected override bool IsEmpty(ref WeakDictionaryStrongValuesItem<TValue> item)
+        internal protected override bool IsEmpty(ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item)
         { return item._Key == null; }
 
-        internal protected override bool IsGarbage(ref WeakDictionaryStrongValuesItem<TValue> item)
+        internal protected override bool IsGarbage(ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item)
         { return item._Key != null && item._Key.Target == null; }
 
-        internal protected override WeakDictionaryStrongValuesItem<TValue> EmptyItem
-        { get { return default(WeakDictionaryStrongValuesItem<TValue>); } }
+        internal protected override ConcurrentWeakDictionaryStrongValuesItem<TValue> EmptyItem
+        { get { return default(ConcurrentWeakDictionaryStrongValuesItem<TValue>); } }
 
         #endregion
 
@@ -109,8 +109,8 @@ namespace ConcurrentHashtable
             if (key == null)
                 throw new ArgumentNullException("key");
 
-            var item = new WeakDictionaryStrongValuesItem<TValue>(GetHashCode(key), new WeakReference(key), value);
-            WeakDictionaryStrongValuesItem<TValue> oldItem;
+            var item = new ConcurrentWeakDictionaryStrongValuesItem<TValue>(GetHashCode(key), new WeakReference(key), value);
+            ConcurrentWeakDictionaryStrongValuesItem<TValue> oldItem;
             base.InsertItem(ref item, out oldItem);
         }
 
@@ -125,8 +125,8 @@ namespace ConcurrentHashtable
             if (key == null)
                 throw new ArgumentNullException("key");
 
-            var item = new WeakDictionaryStrongValuesItem<TValue>(GetHashCode(key), new WeakReference(key), newValue);
-            WeakDictionaryStrongValuesItem<TValue> oldItem;
+            var item = new ConcurrentWeakDictionaryStrongValuesItem<TValue>(GetHashCode(key), new WeakReference(key), newValue);
+            ConcurrentWeakDictionaryStrongValuesItem<TValue> oldItem;
 
             base.GetOldestItem(ref item, out oldItem);
 
@@ -142,8 +142,8 @@ namespace ConcurrentHashtable
             if (key == null)
                 throw new ArgumentNullException("key");
 
-            var item = new WeakDictionaryStrongValuesKey<TKey>(GetHashCode(key), key);
-            WeakDictionaryStrongValuesItem<TValue> oldItem;
+            var item = new ConcurrentWeakDictionaryStrongValuesKey<TKey>(GetHashCode(key), key);
+            ConcurrentWeakDictionaryStrongValuesItem<TValue> oldItem;
 
             base.RemoveItem(ref item, out oldItem);
         }
@@ -159,8 +159,8 @@ namespace ConcurrentHashtable
             if (key == null)
                 throw new ArgumentNullException("key");
 
-            var item = new WeakDictionaryStrongValuesKey<TKey>(GetHashCode(key), key);
-            WeakDictionaryStrongValuesItem<TValue> oldItem;
+            var item = new ConcurrentWeakDictionaryStrongValuesKey<TKey>(GetHashCode(key), key);
+            ConcurrentWeakDictionaryStrongValuesItem<TValue> oldItem;
 
             if (base.FindItem(ref item, out oldItem))
             {
@@ -184,8 +184,8 @@ namespace ConcurrentHashtable
             if (key == null)
                 throw new ArgumentNullException("key");
 
-            var item = new WeakDictionaryStrongValuesKey<TKey>(GetHashCode(key), key);
-            WeakDictionaryStrongValuesItem<TValue> oldItem;
+            var item = new ConcurrentWeakDictionaryStrongValuesKey<TKey>(GetHashCode(key), key);
+            ConcurrentWeakDictionaryStrongValuesItem<TValue> oldItem;
 
             if (base.RemoveItem(ref item, out oldItem))
             {
@@ -219,7 +219,7 @@ namespace ConcurrentHashtable
         /// </summary>
         /// <returns>An array containing the current values.</returns>
         /// <remarks>It is explicitly not guaranteed that any value contained in the returned array is still present
-        /// in the WeakDictionaryStrongValues even at the moment this array is returned.</remarks>
+        /// in the ConcurrentWeakDictionaryStrongValues even at the moment this array is returned.</remarks>
         public TValue[] GetCurrentValues()
         {
             lock (SyncRoot)
@@ -234,7 +234,7 @@ namespace ConcurrentHashtable
         /// </summary>
         /// <returns>An array containing the current keys.</returns>
         /// <remarks>It is explicitly not guaranteed that any key contained in the returned array is still present
-        /// in the WeakDictionaryStrongValues even at the moment this array is returned.</remarks>
+        /// in the ConcurrentWeakDictionaryStrongValues even at the moment this array is returned.</remarks>
         public TKey[] GetCurrentKeys()
         {
             var comparer = _Comparer; 

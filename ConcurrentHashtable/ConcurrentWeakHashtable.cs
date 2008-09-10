@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace ConcurrentHashtable
 {
-    public abstract class WeakHashtable<TStored, TSearch> : Hashtable<TStored, TSearch>, IMaintainable
+    public abstract class ConcurrentWeakHashtable<TStored, TSearch> : ConcurrentHashtable<TStored, TSearch>, IMaintainable
     {
         /// <summary>
         /// Table maintenance, removes all GC'd entries.
@@ -32,7 +32,7 @@ namespace ConcurrentHashtable
         protected override void Initialize()
         {
             base.Initialize();
-            WeakHashtableHelper.Register(this);
+            ConcurrentWeakHashtableHelper.Register(this);
         }
 
         /// <summary>

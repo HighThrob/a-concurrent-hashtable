@@ -21,7 +21,7 @@ namespace ConcurrentHashtable
         /// Remove all items in the segment that are Garbage.
         /// </summary>
         /// <param name="traits">The <see cref="Hashtable{TStored,TSearch}"/> that determines how to treat each individual item.</param>
-        public void DisposeGarbage(WeakHashtable<TStored, TSearch> traits)
+        public void DisposeGarbage(ConcurrentWeakHashtable<TStored, TSearch> traits)
         {
             var garbageCount = 0;
 

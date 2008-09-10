@@ -15,7 +15,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryStrongKeysInsert()
         {
-            var dictionary = new WeakDictionaryStrongKeys<object, object>();
+            var dictionary = new ConcurrentWeakDictionaryStrongKeys<object, object>();
 
             var key = new object();
             var value = new object();
@@ -46,7 +46,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryStrongKeysGetOldest()
         {
-            var dictionary = new WeakDictionaryStrongKeys<object, object>();
+            var dictionary = new ConcurrentWeakDictionaryStrongKeys<object, object>();
 
             var key = new object();
             var value = new object();
@@ -76,7 +76,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryStrongKeysRemove()
         {
-            var dictionary = new WeakDictionaryStrongKeys<object, object>();
+            var dictionary = new ConcurrentWeakDictionaryStrongKeys<object, object>();
 
             var key = new object();
             var value = new object();
@@ -91,7 +91,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryStrongKeysTryGetValue()
         {
-            var dictionary = new WeakDictionaryStrongKeys<object, object>();
+            var dictionary = new ConcurrentWeakDictionaryStrongKeys<object, object>();
 
             var key = new object();
             var value = new object();
@@ -109,7 +109,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryStrongKeysTryPopValue()
         {
-            var dictionary = new WeakDictionaryStrongKeys<object, object>();
+            var dictionary = new ConcurrentWeakDictionaryStrongKeys<object, object>();
 
             var key = new object();
             var value = new object();
@@ -127,7 +127,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryStrongKeysIndexer()
         {
-            var dictionary = new WeakDictionaryStrongKeys<object, object>();
+            var dictionary = new ConcurrentWeakDictionaryStrongKeys<object, object>();
 
             var key1 = new object();
             var value1 = new object();
@@ -145,7 +145,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryStrongKeysCurrentValues()
         {
-            var dictionary = new WeakDictionaryStrongKeys<object, object>();
+            var dictionary = new ConcurrentWeakDictionaryStrongKeys<object, object>();
 
             var key1 = new object();
             var value1 = new object();
@@ -164,7 +164,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryStrongKeysCurrentKeys()
         {
-            var dictionary = new WeakDictionaryStrongKeys<object, object>();
+            var dictionary = new ConcurrentWeakDictionaryStrongKeys<object, object>();
 
             var key1 = new object();
             var value1 = new object();
@@ -183,7 +183,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryStrongKeysClear()
         {
-            var dictionary = new WeakDictionaryStrongKeys<object, object>();
+            var dictionary = new ConcurrentWeakDictionaryStrongKeys<object, object>();
 
             var key1 = new object();
             var value1 = new object();
@@ -204,7 +204,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void WeakDictionaryStrongKeysGarbageCollection()
         {
-            var dictionary = new WeakDictionaryStrongKeys<object, object>();
+            var dictionary = new ConcurrentWeakDictionaryStrongKeys<object, object>();
 
             for( int i = 0; i < 1000; ++i )
                 dictionary[new Object()] = new object();

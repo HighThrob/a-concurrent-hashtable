@@ -51,7 +51,7 @@ namespace ConcurrentHashtableUnitTest
             return dict;
         }
 
-        class HashtableStub : WeakHashtable<KeyValuePair<int, string>?, int>
+        class HashtableStub : ConcurrentWeakHashtable<KeyValuePair<int, string>?, int>
         {
             public HashtableStub()
                 : base()
