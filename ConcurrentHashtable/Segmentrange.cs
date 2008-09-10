@@ -7,16 +7,29 @@ namespace ConcurrentHashtable
 {
     internal class Segmentrange<TStored, TSearch> 
     {
-        public Segmentrange(int size)
+        protected Segmentrange()
+        {}
+
+        public static Segmentrange<TStored, TSearch> Create(int segmentCount, int initialSegmentSize)
         {
-            _Segments = new Segment<TStored, TSearch>[size];
+            var instance = new Segmentrange<TStored, TSearch>();
+            instance.Initialize(segmentCount, initialSegmentSize);
+            return instance;
+        }
+
+        protected virtual void Initialize(int segmentCount, int initialSegmentSize)
+        {
+            _Segments = new Segment<TStored, TSearch>[segmentCount];
 
             for (int i = 0, end = _Segments.Length; i != end; ++i)
-                _Segments[i] = new Segment<TStored, TSearch>();
+                _Segments[i] = CreateSegment(initialSegmentSize);
 
-            for (int w = size; w != 0; w <<= 1)
+            for (int w = segmentCount; w != 0; w <<= 1)
                 ++_Shift;
         }
+
+        protected virtual Segment<TStored, TSearch> CreateSegment(int initialSegmentSize)
+        { return Segment<TStored, TSearch>.Create(initialSegmentSize); }
 
         Segment<TStored, TSearch>[] _Segments;
         Int32 _Shift;

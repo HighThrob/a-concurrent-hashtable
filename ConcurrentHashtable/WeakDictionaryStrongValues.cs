@@ -31,13 +31,14 @@ namespace ConcurrentHashtable
         }
     }
 
-
-    public class WeakDictionaryStrongValues<TKey,TValue> : Hashtable<WeakDictionaryStrongValuesItem<TValue>,WeakDictionaryStrongValuesKey<TKey>>
+    /// <summary>
+    /// A dictionary holding weak references to its keys and strong references to its values. 
+    /// </summary>
+    /// <typeparam name="TKey">Type of the keys. This must be a reference type.</typeparam>
+    /// <typeparam name="TValue">Type of the values.</typeparam>
+    public sealed class WeakDictionaryStrongValues<TKey,TValue> : WeakHashtable<WeakDictionaryStrongValuesItem<TValue>,WeakDictionaryStrongValuesKey<TKey>>
         where TKey : class
     {
-        const int MinSegments = 16;
-        const int SegmentFill = 16;
-
         #region Constructors
 
         public WeakDictionaryStrongValues()
@@ -45,7 +46,7 @@ namespace ConcurrentHashtable
         { }
 
         public WeakDictionaryStrongValues(IEqualityComparer<TKey> comparer)
-            : base(MinSegments)
+            : base()
         {
             if (comparer == null)
                 throw new ArgumentNullException("comparer");
@@ -89,28 +90,6 @@ namespace ConcurrentHashtable
         { get { return default(WeakDictionaryStrongValuesItem<TValue>); } }
 
         #endregion
-
-        #region DetermineSegmentation
-
-        int _CountHistory;
-
-        protected override int DetermineSegmentation(int count)
-        {
-            if (count > _CountHistory)
-                _CountHistory = count;
-            else
-                _CountHistory = count = _CountHistory / 2 + count / 2; //shrink more slowly
-
-            return Math.Max(MinSegments, count / SegmentFill);
-        }
-
-        #endregion
-
-        protected override void DoTableMaintenance()
-        {
-            base.DisposeGarbage();
-            base.DoTableMaintenance();
-        }
 
         public IEqualityComparer<TKey> _Comparer;
 
@@ -236,8 +215,11 @@ namespace ConcurrentHashtable
         }
 
         /// <summary>
-        /// GetCurrentValues
+        /// Gives a snapshot of the current value collection.
         /// </summary>
+        /// <returns>An array containing the current values.</returns>
+        /// <remarks>It is explicitly not guaranteed that any value contained in the returned array is still present
+        /// in the WeakDictionaryStrongValues even at the moment this array is returned.</remarks>
         public TValue[] GetCurrentValues()
         {
             lock (SyncRoot)
@@ -248,8 +230,11 @@ namespace ConcurrentHashtable
         }
 
         /// <summary>
-        /// GetCurrentKeys
+        /// Gives a snapshot of the current key collection.
         /// </summary>
+        /// <returns>An array containing the current keys.</returns>
+        /// <remarks>It is explicitly not guaranteed that any key contained in the returned array is still present
+        /// in the WeakDictionaryStrongValues even at the moment this array is returned.</remarks>
         public TKey[] GetCurrentKeys()
         {
             var comparer = _Comparer; 

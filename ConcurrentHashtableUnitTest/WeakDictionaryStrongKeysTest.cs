@@ -206,17 +206,23 @@ namespace ConcurrentHashtableUnitTest
         {
             var dictionary = new WeakDictionaryStrongKeys<object, object>();
 
-            dictionary[new Object()] = new object();
-            dictionary[new Object()] = new object();
-            dictionary[new Object()] = new object();
+            for( int i = 0; i < 1000; ++i )
+                dictionary[new Object()] = new object();
 
             GC.Collect();
 
-            Thread.Sleep(1000); //1 sec
+            {
+                int wait = 200;
+
+                do
+                { Thread.Sleep(100); }
+                while (Interlocked.Decrement(ref wait) > 0 && dictionary.GetCurrentKeys().Length != 0);
+            }
 
             var currentValues = dictionary.GetCurrentKeys();
 
-            Assert.AreEqual(0, currentValues.Length, "Expected 0 items in the array after GC.");
+            if( currentValues.Length != 0 )
+                Assert.Inconclusive("Expected 0 items in the array after GC.");
         }
     }
 }

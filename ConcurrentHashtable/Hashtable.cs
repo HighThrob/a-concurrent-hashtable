@@ -6,26 +6,36 @@ using System.Threading;
 
 namespace ConcurrentHashtable
 {
-    public abstract class Hashtable<TStored, TSearch> : HashtableBase
+    public abstract class Hashtable<TStored, TSearch>
     {
-        internal Hashtable(Int32 segmentCount)
+        protected Hashtable()
+        {}
+
+        protected virtual void Initialize()
         {
-            _CurrentRange = new Segmentrange<TStored, TSearch>(segmentCount);
+            var minSegments = MinSegments;
+            var meanSegmentAllocatedSpace = MeanSegmentAllocatedSpace;
+
+            _CurrentRange = CreateSegmentRange(minSegments, meanSegmentAllocatedSpace);
             _NewRange = _CurrentRange;
-            _SwitchPoint = 0;         
+            _SwitchPoint = 0;
+            _AllocatedSpace = minSegments * meanSegmentAllocatedSpace;
         }
+
+        internal virtual Segmentrange<TStored, TSearch> CreateSegmentRange(int segmentCount, int initialSegmentSize)
+        { return Segmentrange<TStored, TSearch>.Create(segmentCount, initialSegmentSize); }
 
         /// <summary>
         /// While adjusting the segmentation, _NewRange will hold a reference to the new range of segments.
         /// when the adjustment is complete this reference will be copied to _CurrentRange.
         /// </summary>
-        Segmentrange<TStored, TSearch> _NewRange;
+        internal Segmentrange<TStored, TSearch> _NewRange;
 
         /// <summary>
         /// Will hold the most current reange of segments. When busy adjusting the segmentation, this
         /// field will hold a reference to the old range.
         /// </summary>
-        Segmentrange<TStored, TSearch> _CurrentRange;
+        internal Segmentrange<TStored, TSearch> _CurrentRange;
 
         /// <summary>
         /// While adjusting the segmentation this field will hold a boundary
@@ -35,7 +45,7 @@ namespace ConcurrentHashtable
         Int32 _SwitchPoint;
 
         #region Traits
-
+        
         internal protected abstract UInt32 GetHashCode(ref TStored item);
         internal protected abstract UInt32 GetHashCode(ref TSearch key);
         internal protected abstract bool Equals(ref TStored item, ref TSearch key);
@@ -48,12 +58,6 @@ namespace ConcurrentHashtable
         /// <returns></returns>
         internal protected abstract bool IsEmpty(ref TStored item);
 
-        /// <summary>
-        /// Indicates if a specific content item should be treated as garbage and removed.
-        /// </summary>
-        /// <param name="item">The item to judge.</param>
-        /// <returns>A boolean value that is true if the item is not empty and should be treated as garbage; otherwise false.</returns>
-        internal protected abstract bool IsGarbage(ref TStored item);
         internal protected abstract TStored EmptyItem { get; }
 
         #endregion
@@ -260,150 +264,159 @@ namespace ConcurrentHashtable
 
         #region Table Maintenance methods
 
-        /// <summary>
-        /// Seeps all items currently in the collection. Any item it finds where the
-        /// <see cref="ISegmentTraits{TStored,TSearch}.IsGarbage"/> methods returns false for
-        /// will be removed from the collection.
-        /// Aquires a lock on SyncRoot before it does it's thing.
-        /// </summary>
-        protected void DisposeGarbage()
+        protected virtual Int32 MinSegments { get { return 4; } }
+        protected virtual Int32 MeanSegmentAllocatedSpace { get { return 32; } }
+
+        bool SegmentationAdjustmentNeeded()
         {
-            lock (SyncRoot)
+            var minSegments = MinSegments;
+            var meanSegmentAllocatedSpace = MeanSegmentAllocatedSpace;
+
+            var newSpace = Math.Max(_AllocatedSpace, minSegments * meanSegmentAllocatedSpace);
+            var meanSpace = _CurrentRange.Count * meanSegmentAllocatedSpace;
+
+            return newSpace > (meanSpace << 1) || newSpace <= (meanSpace >> 1);            
+        }
+
+        internal void EffectTotalAllocatedSpace(Int32 effect)
+        {
+            Interlocked.Add(ref _AllocatedSpace, effect);
+
+            if ( SegmentationAdjustmentNeeded() && Interlocked.Exchange(ref _AssessSegmentationPending, 1) == 0 )
+                    ThreadPool.QueueUserWorkItem(AssessSegmentation);
+        }
+
+        void AssessSegmentation(object dummy)
+        {
+            try
             {
-                for (int i = 0, end = _CurrentRange.Count; i != end; ++i)
+                while (SegmentationAdjustmentNeeded())
                 {
-                    var segment = _CurrentRange.GetSegmentByIndex(i);
+                    var meanSegmentAllocatedSpace = MeanSegmentAllocatedSpace;
+                   
+                    int allocatedSpace = _AllocatedSpace;
+                    int atleastSegments = allocatedSpace / meanSegmentAllocatedSpace;
 
-                    while (!segment.Lock())
-                        Thread.Sleep(0);
+                    Int32 segments = MinSegments;
 
-                    segment.DisposeGarbage(this);
+                    while (atleastSegments > segments)
+                        segments <<= 1;
 
-                    segment.Unlock();
+                    SetSegmentation(segments, meanSegmentAllocatedSpace);
                 }
             }
+            finally
+            {
+                Interlocked.Exchange(ref _AssessSegmentationPending, 0);
+                EffectTotalAllocatedSpace(0);
+            }
         }
+
+        Int32 _AllocatedSpace;
+        Int32 _AssessSegmentationPending;
 
         /// <summary>
         /// Adjusts the segmentation to the new segment count
         /// </summary>
         /// <param name="newSegmentCount">The new number of segments to use. This must be a power of 2.</param>
-        void SetSegmentation(Int32 newSegmentCount)
-        {
-            unchecked
-            {
-                //create the new range
-                Segmentrange<TStored, TSearch> newRange = new Segmentrange<TStored, TSearch>(newSegmentCount);
-
-                //lock all new segments
-                //we are going to release these locks while we migrate the items from the
-                //old (current) range to the new range.
-                for (int i = 0, end = newRange.Count; i != end; ++i)
-                    newRange.GetSegmentByIndex(i).Lock();
-
-                //set new (completely locked) range
-                Interlocked.Exchange(ref _NewRange, newRange);
-
-
-                //calculate the step sizes for our switch points            
-                var currentSwitchPointStep = (UInt32)(1 << _CurrentRange.Shift);
-                var newSwitchPointStep = (UInt32)(1 << newRange.Shift);
-
-                //position in new range up from where the new segments are locked
-                var newLockedPoint = (UInt32)0;
-
-                //At this moment _SwitchPoint should be 0
-                var switchPoint = (UInt32)_SwitchPoint;
-
-                do
-                {
-                    //aquire segment to migrate
-                    var currentSegment = _CurrentRange.GetSegment(switchPoint);
-
-                    //lock segment (never to release it)
-                    while (!currentSegment.Lock())
-                        Thread.Sleep(0);
-
-                    //migrate all items in the segment to the new range
-                    TStored currentKey;
-
-                    int it = -1;
-
-                    while ((it = currentSegment.GetNextItem(it, out currentKey, this)) >= 0)
-                    {
-                        var currentKeyHash = this.GetHashCode(ref currentKey);
-
-                        //get the new segment. this is already locked.
-                        var newSegment = _NewRange.GetSegment(currentKeyHash);
-
-                        TStored dummyKey;
-                        newSegment.InsertItem(ref currentKey, out dummyKey, this);
-                    }
-
-                    if (switchPoint == 0 - currentSwitchPointStep)
-                    {
-                        //we are about to wrap _SwitchPoint arround.
-                        //We have migrated all items from the intere table to the
-                        //new range.
-                        //replace current with new before advancing, otherwise
-                        //we would create a completely blocked table.
-                        Interlocked.Exchange(ref _CurrentRange, newRange);
-                    }
-
-                    //advance _SwitchPoint
-                    switchPoint = (UInt32)Interlocked.Add(ref _SwitchPoint, (Int32)currentSwitchPointStep);
-
-                    //release lock of new segments upto the point where we can still add new items
-                    //during this migration.
-                    while (true)
-                    {
-                        var nextNewLockedPoint = newLockedPoint + newSwitchPointStep;
-
-                        if (nextNewLockedPoint > switchPoint || nextNewLockedPoint == 0)
-                            break;
-
-                        newRange.GetSegment(newLockedPoint).Unlock();
-                        newLockedPoint = nextNewLockedPoint;
-                    }
-                }
-                while (switchPoint != 0);
-
-                //unlock any remaining new segments
-                while (newLockedPoint != 0)
-                {
-                    newRange.GetSegment(newLockedPoint).Unlock();
-                    newLockedPoint += newSwitchPointStep;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Determines the number of segments the table should be broken up in.
-        /// Each segment can be accessed by 1 thread simultaneously. The more segments
-        /// there are the more concurrent the table gets.
-        /// </summary>
-        /// <param name="count">Roughly the number of items contained in the table.</param>
-        /// <returns>The number of segments. The actual number of segments will be the first power of 2 that is greater than or equal to the returned value.</returns>
-        protected abstract Int32 DetermineSegmentation(Int32 count);
-
-        protected override void DoTableMaintenance()
+        void SetSegmentation(Int32 newSegmentCount, Int32 segmentSize)
         {
             lock (SyncRoot)
             {
-                //determine prefered level of segmentation
-                Int32 count = 0;
+                unchecked
+                {
+                    //create the new range
+                    Segmentrange<TStored, TSearch> newRange = CreateSegmentRange(newSegmentCount, segmentSize);
 
-                for (int i = 0, end = _CurrentRange.Count; i != end; ++i)
-                    count += _CurrentRange.GetSegmentByIndex(i).Count;
+                    Interlocked.Add(ref _AllocatedSpace, newSegmentCount * segmentSize);
 
-                Int32 lowerLimit = DetermineSegmentation(count);
-                Int32 segmentation = 1;
+                    //lock all new segments
+                    //we are going to release these locks while we migrate the items from the
+                    //old (current) range to the new range.
+                    for (int i = 0, end = newRange.Count; i != end; ++i)
+                        newRange.GetSegmentByIndex(i).Lock();
 
-                while (lowerLimit > segmentation)
-                    segmentation <<= 1;
+                    //set new (completely locked) range
+                    Interlocked.Exchange(ref _NewRange, newRange);
 
-                if (segmentation != _CurrentRange.Count)
-                    SetSegmentation(segmentation);
+
+                    //calculate the step sizes for our switch points            
+                    var currentSwitchPointStep = (UInt32)(1 << _CurrentRange.Shift);
+                    var newSwitchPointStep = (UInt32)(1 << newRange.Shift);
+
+                    //position in new range up from where the new segments are locked
+                    var newLockedPoint = (UInt32)0;
+
+                    //At this moment _SwitchPoint should be 0
+                    var switchPoint = (UInt32)_SwitchPoint;
+
+                    do
+                    {
+                        //aquire segment to migrate
+                        var currentSegment = _CurrentRange.GetSegment(switchPoint);
+
+                        //lock segment (never to release it)
+                        while (!currentSegment.Lock())
+                            Thread.Sleep(0);
+
+                        //migrate all items in the segment to the new range
+                        TStored currentKey;
+
+                        int it = -1;
+
+                        while ((it = currentSegment.GetNextItem(it, out currentKey, this)) >= 0)
+                        {
+                            var currentKeyHash = this.GetHashCode(ref currentKey);
+
+                            //get the new segment. this is already locked.
+                            var newSegment = _NewRange.GetSegment(currentKeyHash);
+
+                            TStored dummyKey;
+                            newSegment.InsertItem(ref currentKey, out dummyKey, this);
+                        }
+
+                        //substract allocated space from allocated space count.
+                        currentSegment.Bye(this);
+
+                        if (switchPoint == 0 - currentSwitchPointStep)
+                        {
+                            //we are about to wrap _SwitchPoint arround.
+                            //We have migrated all items from the intere table to the
+                            //new range.
+                            //replace current with new before advancing, otherwise
+                            //we would create a completely blocked table.
+                            Interlocked.Exchange(ref _CurrentRange, newRange);
+                        }
+
+                        //advance _SwitchPoint
+                        switchPoint = (UInt32)Interlocked.Add(ref _SwitchPoint, (Int32)currentSwitchPointStep);
+
+                        //release lock of new segments upto the point where we can still add new items
+                        //during this migration.
+                        while (true)
+                        {
+                            var nextNewLockedPoint = newLockedPoint + newSwitchPointStep;
+
+                            if (nextNewLockedPoint > switchPoint || nextNewLockedPoint == 0)
+                                break;
+                            
+                            var newSegment = newRange.GetSegment(newLockedPoint);
+                            newSegment.Trim(this);
+                            newSegment.Unlock();
+                            newLockedPoint = nextNewLockedPoint;
+                        }
+                    }
+                    while (switchPoint != 0);
+
+                    //unlock any remaining new segments
+                    while (newLockedPoint != 0)
+                    {
+                        var newSegment = newRange.GetSegment(newLockedPoint);
+                        newSegment.Trim(this);
+                        newSegment.Unlock();
+                        newLockedPoint += newSwitchPointStep;
+                    }
+                }
             }
         }
 

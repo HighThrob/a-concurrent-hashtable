@@ -51,13 +51,10 @@ namespace ConcurrentHashtableUnitTest
             return dict;
         }
 
-        class HashtableStub : Hashtable<KeyValuePair<int, string>?, int>
+        class HashtableStub : WeakHashtable<KeyValuePair<int, string>?, int>
         {
-            const int MinSegments = 16;
-            const int SegmentFill = 16;
-
             public HashtableStub()
-                : base(MinSegments)
+                : base()
             {
                 _Comparer = EqualityComparer<int>.Default;
 
@@ -92,22 +89,6 @@ namespace ConcurrentHashtableUnitTest
 
             internal protected override KeyValuePair<int, string>? EmptyItem
             { get { return null; } }
-
-            #region DetermineSegmentation
-
-            int _CountHistory;
-
-            protected override int DetermineSegmentation(int count)
-            {
-                if (count > _CountHistory)
-                    _CountHistory = count;
-                else
-                    _CountHistory = count = _CountHistory / 2 + count / 2; //shrink more slowly
-
-                return Math.Max(MinSegments, count / SegmentFill);
-            }
-
-            #endregion
 
             public new bool FindItem(ref int searchKey, out KeyValuePair<int, string>? item)
             { return base.FindItem(ref searchKey, out item); }
@@ -220,7 +201,11 @@ namespace ConcurrentHashtableUnitTest
                 );
             }
 
-            Thread.Sleep(1000); // 1 sec.. enough?
+            int wait = 200;
+
+            do
+            { Thread.Sleep(100); }
+            while (Interlocked.Decrement(ref wait) > 0 && runningThreads != 0); 
 
             Assert.AreEqual(0, runningThreads, "Expected all threads to be finished by now.");
             Assert.AreEqual(filler.Count, stub.Count, "Expected Count to be equal to number of unique inserted items.");
@@ -371,7 +356,13 @@ namespace ConcurrentHashtableUnitTest
                 );
             }
 
-            Thread.Sleep(1000); // 1 sec.. enough?
+            {
+                int wait = 200;
+
+                do
+                { Thread.Sleep(100); }
+                while (Interlocked.Decrement(ref wait) > 0 && runningThreads != 0);
+            }
 
             Assert.AreEqual(0, runningThreads, "Expected all threads to be finished by now.");
         }
@@ -457,7 +448,13 @@ namespace ConcurrentHashtableUnitTest
                 );
             }
 
-            Thread.Sleep(1000); // 1 sec.. enough?
+            {
+                int wait = 200;
+
+                do
+                { Thread.Sleep(100); }
+                while (Interlocked.Decrement(ref wait) > 0 && runningThreads != 0);
+            }
 
             Assert.AreEqual(0, runningThreads, "Expected all threads to be finished by now.");
         }
@@ -566,7 +563,13 @@ namespace ConcurrentHashtableUnitTest
                 );
             }
 
-            Thread.Sleep(1000); // 1 sec.. enough?
+            {
+                int wait = 200;
+
+                do
+                { Thread.Sleep(100); }
+                while (Interlocked.Decrement(ref wait) > 0 && runningThreads != 0);
+            }
 
             Assert.AreEqual(0, runningThreads, "Expected all threads to be finished by now.");
 
