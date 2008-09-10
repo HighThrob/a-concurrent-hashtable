@@ -32,12 +32,9 @@ namespace ConcurrentHashtable
     }
 
 
-    public class WeakDictionaryStrongKeys<TKey,TValue> : Hashtable<WeakDictionaryStrongKeysItem<TKey>,WeakDictionaryStrongKeysKey<TKey>>
+    public sealed class WeakDictionaryStrongKeys<TKey,TValue> : WeakHashtable<WeakDictionaryStrongKeysItem<TKey>,WeakDictionaryStrongKeysKey<TKey>>
         where TValue : class
     {
-        const int MinSegments = 16;
-        const int SegmentFill = 16;
-
         #region Constructors
 
         public WeakDictionaryStrongKeys()
@@ -45,7 +42,7 @@ namespace ConcurrentHashtable
         { }
 
         public WeakDictionaryStrongKeys(IEqualityComparer<TKey> comparer)
-            : base(MinSegments)
+            : base()
         {
             if (comparer == null)
                 throw new ArgumentNullException("comparer");
@@ -81,28 +78,6 @@ namespace ConcurrentHashtable
         { get { return default(WeakDictionaryStrongKeysItem<TKey>); } }
 
         #endregion
-
-        #region DetermineSegmentation
-
-        int _CountHistory;
-
-        protected override int DetermineSegmentation(int count)
-        {
-            if (count > _CountHistory)
-                _CountHistory = count;
-            else
-                _CountHistory = count = _CountHistory / 2 + count / 2; //shrink more slowly
-
-            return Math.Max(MinSegments, count / SegmentFill);
-        }
-
-        #endregion
-
-        protected override void DoTableMaintenance()
-        {
-            base.DisposeGarbage();
-            base.DoTableMaintenance();
-        }
 
         public IEqualityComparer<TKey> _Comparer;
 

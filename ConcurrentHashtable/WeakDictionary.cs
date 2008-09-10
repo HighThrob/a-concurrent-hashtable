@@ -5,6 +5,9 @@ using System.Text;
 
 namespace ConcurrentHashtable
 {
+    /// <summary>
+    /// Entry item for WeakDictionary
+    /// </summary>
     public struct WeakDictionaryItem
     {
         internal UInt32 _Hash;
@@ -19,6 +22,10 @@ namespace ConcurrentHashtable
         }
     }
 
+    /// <summary>
+    /// Search key for WeakDictionary
+    /// </summary>
+    /// <typeparam name="TKey"></typeparam>
     public struct WeakDictionaryKey<TKey>
     {
         internal UInt32 _Hash;
@@ -31,21 +38,31 @@ namespace ConcurrentHashtable
         }
     }
 
-    public class WeakDictionary<TKey, TValue> : Hashtable<WeakDictionaryItem, WeakDictionaryKey<TKey>>
+    /// <summary>
+    /// A dictionary that has weakreferences to it's keys and values. If either a key or its associated value gets garbage collected
+    /// then the entry will be removed from the dictionary. 
+    /// </summary>
+    /// <typeparam name="TKey">Type of the keys. This must be a reference type.</typeparam>
+    /// <typeparam name="TValue">Type of the values. This must be a reference type.</typeparam>
+    public sealed class WeakDictionary<TKey, TValue> : WeakHashtable<WeakDictionaryItem, WeakDictionaryKey<TKey>>
         where TKey : class
         where TValue : class
     {
-        const int MinSegments = 16;
-        const int SegmentFill = 16;
-
         #region Constructors
 
+        /// <summary>
+        /// Instantiates a WeakDictionary with the default comparer for <typeparamref name="TKey"/>.
+        /// </summary>
         public WeakDictionary()
             : this(EqualityComparer<TKey>.Default)
         { }
 
+        /// <summary>
+        /// Instatiates a WeakDictionary with an explicit comparer for <typeparamref name="TKey"/>.
+        /// </summary>
+        /// <param name="comparer">An <see cref="IEqualityComparer{TKey}"/> to comparer keys.</param>
         public WeakDictionary(IEqualityComparer<TKey> comparer)
-            : base(MinSegments)
+            : base()
         {
             if (comparer == null)
                 throw new ArgumentNullException("comparer");
@@ -90,28 +107,6 @@ namespace ConcurrentHashtable
 
 
         #endregion
-
-        #region DetermineSegmentation
-
-        int _CountHistory;
-
-        protected override int DetermineSegmentation(int count)
-        {
-            if (count > _CountHistory)
-                _CountHistory = count;
-            else
-                _CountHistory = count = _CountHistory / 2 + count / 2; //shrink more slowly
-
-            return Math.Max(MinSegments, count / SegmentFill);
-        }
-
-        #endregion
-
-        protected override void DoTableMaintenance()
-        {
-            base.DisposeGarbage();
-            base.DoTableMaintenance();
-        }
 
         public IEqualityComparer<TKey> _Comparer;
 

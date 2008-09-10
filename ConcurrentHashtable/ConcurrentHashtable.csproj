@@ -49,6 +49,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IMaintainable.cs" />
     <Compile Include="WeakDictionaryStrongKeys.cs" />
     <Compile Include="WeakDictionaryStrongValues.cs" />
     <Compile Include="Dictionary.cs" />
@@ -57,9 +58,11 @@
     <Compile Include="Segmentrange.cs" />
     <Compile Include="Segment.cs" />
     <Compile Include="Hashtable.cs" />
-    <Compile Include="HashtableBase.cs" />
+    <Compile Include="WeakHashtableHelper.cs" />
     <Compile Include="WeakDictionary.cs" />
-    <Compile Include="WeakSet.cs" />
+    <Compile Include="WeakHashtable.cs" />
+    <Compile Include="WeakSegment.cs" />
+    <Compile Include="WeakSegmentrange.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

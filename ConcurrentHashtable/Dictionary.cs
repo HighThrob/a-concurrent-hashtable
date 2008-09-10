@@ -39,9 +39,6 @@ namespace ConcurrentHashtable
     /// </remarks>
     public sealed class Dictionary<TKey, TValue> : Hashtable<KeyValuePair<TKey, TValue>?, DictionaryKey<TKey, TValue>>, IDictionary<TKey, TValue> 
     {
-        const int MinSegments = 16;
-        const int SegmentFill = 16;
-
         #region Constructors
 
         public Dictionary()
@@ -49,7 +46,7 @@ namespace ConcurrentHashtable
         { }
 
         public Dictionary(IEqualityComparer<TKey> comparer)
-            : base(MinSegments)
+            : base()
         {
             if (comparer == null)
                 throw new ArgumentNullException("comparer");
@@ -80,28 +77,9 @@ namespace ConcurrentHashtable
         internal protected override bool IsEmpty(ref KeyValuePair<TKey, TValue>? item)
         { return !item.HasValue; }
 
-        internal protected override bool IsGarbage(ref KeyValuePair<TKey, TValue>? item)
-        { return false; }
-
         internal protected override KeyValuePair<TKey, TValue>? EmptyItem
         { get { return null; } }
 
-
-        #endregion
-
-        #region DetermineSegmentation
-
-        int _CountHistory;
-
-        protected override int DetermineSegmentation(int count)
-        {
-            if (count > _CountHistory)
-                _CountHistory = count;
-            else
-                _CountHistory = count = _CountHistory / 2 + count / 2; //shrink more slowly
-
-            return Math.Max(MinSegments, count / SegmentFill);
-        }
 
         #endregion
 

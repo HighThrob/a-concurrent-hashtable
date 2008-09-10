@@ -7,11 +7,34 @@ using System.Threading;
 
 namespace ConcurrentHashtable
 {
+    /// <summary>
+    /// A singlethreaded segment in a hashtable. 
+    /// </summary>
+    /// <typeparam name="TStored"></typeparam>
+    /// <typeparam name="TSearch"></typeparam>
+    /// <remarks>
+    /// Though each segment can be accessed
+    /// by 1 thread simultaneously, the hashtable becomes concurrent by containing many segments so that collisions
+    /// are rare.
+    /// Each segment is itself a small hashtable that can grow and shrink individualy. This prevents blocking of
+    /// the intire hashtable when growing or shrinking is needed. Becuase each segment is relatively small (depending on
+    /// the quality of the hash) resizing of the individual segments will not take much time.
+    /// </remarks>
     internal class Segment<TStored,TSearch>
     {
-        public Segment()
+        protected Segment( )
+        {}
+
+        public static Segment<TStored, TSearch> Create(Int32 initialSize)
         {
-            _List = new TStored[4];
+            var instance = new Segment<TStored, TSearch>();
+            instance.Initialize(initialSize);
+            return instance;
+        }
+
+        protected virtual void Initialize(Int32 initialSize)
+        {
+            _List = new TStored[Math.Max(4, initialSize)];
         }
 
         Int32 _Token;
@@ -20,7 +43,13 @@ namespace ConcurrentHashtable
         public Int32 Count
         { get { return _Count; } }
 
-        TStored[] _List;
+        internal TStored[] _List;
+
+        public void Welcome(Hashtable<TStored, TSearch> traits)
+        { traits.EffectTotalAllocatedSpace(_List.Length); }
+
+        public void Bye(Hashtable<TStored, TSearch> traits)
+        { traits.EffectTotalAllocatedSpace(-_List.Length); }
 
         public bool FindItem(ref TSearch key, out TStored item, Hashtable<TStored, TSearch> traits)
         {
@@ -170,7 +199,7 @@ namespace ConcurrentHashtable
                 {
                     item = _List[i];
                     RemoveAtIndex(i, traits);
-                    DecrementCount(traits);                    
+                    DecrementCount(traits);
                     return true;
                 }
 
@@ -213,19 +242,6 @@ namespace ConcurrentHashtable
             _Count = 0;
         }
 
-        /// <summary>
-        /// Remove all items in the segment that are Garbage.
-        /// </summary>
-        /// <param name="traits">The <see cref="Hashtable{TStored,TSearch}"/> that determines how to treat each individual item.</param>
-        public void DisposeGarbage(Hashtable<TStored, TSearch> traits)
-        {
-            for ( UInt32 i = 0, end = (UInt32)(_List.Length); i != end; ++i)
-            {
-                while (traits.IsGarbage(ref _List[i]))
-                    RemoveAtIndex(i, traits); 
-            }
-        }
-
         public bool Lock()
         {
             return Interlocked.CompareExchange(ref _Token, 1, 0) == 0;
@@ -236,7 +252,7 @@ namespace ConcurrentHashtable
             Interlocked.Exchange(ref _Token, 0);
         }
 
-        private void RemoveAtIndex(UInt32 index, Hashtable<TStored, TSearch> traits)
+        protected void RemoveAtIndex(UInt32 index, Hashtable<TStored, TSearch> traits)
         {
             var mask = (UInt32)(_List.Length - 1);
             var i = index;
@@ -246,42 +262,68 @@ namespace ConcurrentHashtable
             {
                 if (traits.IsEmpty(ref _List[j]) || (traits.GetHashCode(ref _List[j]) & mask) == j)
                 {
-                    _List[i] = traits.EmptyItem;
-                    return;
+                    _List[i] = traits.EmptyItem;                    
+                    break;
                 }
 
                 _List[i] = _List[j];
 
                 i = j;
                 j = (j + 1) & mask;            
-            }
+            }            
         }
 
-        private void DecrementCount(Hashtable<TStored, TSearch> traits)
+        protected void DecrementCount(Hashtable<TStored, TSearch> traits)
+        { DecrementCount(traits, 1); }
+
+        Int32 GetPreferedListLength()
         {
-            if (--_Count < (_List.Length >> 2))
+            var newListLength = 2;
+
+            while (newListLength < _Count)
+                newListLength <<= 1;
+
+            return newListLength << 1;
+        }
+
+        protected void DecrementCount(Hashtable<TStored, TSearch> traits, int amount)
+        {
+            var oldListLength = _List.Length;
+            _Count -= amount;
+
+            if (oldListLength > 4 && _Count < (oldListLength >> 2))
             {
                 //Shrink
                 var oldList = _List;
-                _List = new TStored[_List.Length >> 1];
+                var newListLength = GetPreferedListLength();
 
-                for (int i = 0, end = oldList.Length; i != end; ++i)
+                _List = new TStored[newListLength];
+
+                for (int i = 0; i != oldListLength; ++i)
                     if (!traits.IsEmpty(ref oldList[i]))
                         DirectInsert(ref oldList[i], traits);
+
+                traits.EffectTotalAllocatedSpace(newListLength - oldListLength);
             }
         }
 
         private void IncrementCount(Hashtable<TStored, TSearch> traits)
         {
-            if (++_Count >= (_List.Length - (_List.Length >> 2)))
+            var oldListLength = _List.Length;
+
+            if (++_Count >= (oldListLength - (oldListLength >> 2)))
             {
                 //Grow
                 var oldList = _List;
-                _List = new TStored[_List.Length << 1];
+                var newListLength = GetPreferedListLength();
 
-                for (int i = 0, end = oldList.Length; i != end; ++i)
+                _List = new TStored[newListLength];
+
+                for (int i = 0; i != oldListLength; ++i)
                     if (!traits.IsEmpty(ref oldList[i]))
                         DirectInsert(ref oldList[i], traits);
+
+                traits.EffectTotalAllocatedSpace(newListLength - oldListLength);
             }
         }
 
@@ -342,5 +384,8 @@ namespace ConcurrentHashtable
                 }
             }
         }
+
+        internal void Trim(Hashtable<TStored, TSearch> traits)
+        { DecrementCount(traits, 0); }
     }
 }

@@ -61,11 +61,13 @@ namespace ConcurrentHashtableUnitTest
         #endregion
 
 
-        class SegmentTraits : Hashtable<long?, int>
+        class SegmentTraits : WeakHashtable<long?, int>
         {
             internal SegmentTraits()
-                : base(16)
-            { }
+                : base()
+            {
+                Initialize();
+            }
 
             #region ISegmentTraits<long?,int> Members
 
@@ -105,17 +107,12 @@ namespace ConcurrentHashtableUnitTest
             }
 
             #endregion
-
-            protected override int DetermineSegmentation(int count)
-            {
-                return 16;
-            }
         }
 
         [TestMethod]
         public void SegmentInserts()
         {
-            var segment = new Segment<long?, int>();
+            var segment = Segment<long?, int>.Create(4);
             var traits = new SegmentTraits();
 
             long?[] items = new long?[] { 34L, 2L, 94L, 236L, 41L, 34928L, 222L, 345L, 123L, 1092L, 347L };
@@ -146,7 +143,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void SegmentDuplicateInserts()
         {
-            var segment = new Segment<long?, int>();
+            var segment = Segment<long?, int>.Create(4);
             var traits = new SegmentTraits();
 
             long?[] items = new long?[] { 34L, 2L, 94L, 236L, 41L, 34928L, 222L, 345L, 123L, 1092L, 347L };
@@ -173,7 +170,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void SegmentFindItem()
         {
-            var segment = new Segment<long?, int>();
+            var segment = Segment<long?, int>.Create(4);
             var traits = new SegmentTraits();
 
             long?[] items = new long?[] { 34L, 2L, 94L, 236L, 41L, 34928L, 222L, 345L, 123L, 1092L, 347L };
@@ -205,7 +202,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void SegmentClear()
         {
-            var segment = new Segment<long?, int>();
+            var segment = Segment<long?, int>.Create(4);
             var traits = new SegmentTraits();
 
             long?[] items = new long?[] { 34L, 2L, 94L, 236L, 41L, 34928L, 222L, 345L, 123L, 1092L, 347L };
@@ -232,7 +229,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void SegmentRemoveItem()
         {
-            var segment = new Segment<long?, int>();
+            var segment = Segment<long?, int>.Create(4);
             var traits = new SegmentTraits();
 
             long?[] items = new long?[] { 34L, 2L, 94L, 236L, 41L, 34928L, 222L, 345L, 123L, 1092L, 347L };
@@ -283,7 +280,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void SegmentGetOldest()
         {
-            var segment = new Segment<long?, int>();
+            var segment = Segment<long?, int>.Create(4);
             var traits = new SegmentTraits();
 
             long?[] items = new long?[] { 34L, 2L, 94L, 236L, 41L, 34928L, 222L, 345L, 123L, 1092L, 347L };
@@ -312,7 +309,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void SegmentGetNextItem()
         {
-            var segment = new Segment<long?, int>();
+            var segment = Segment<long?, int>.Create(4);
             var traits = new SegmentTraits();
 
             long?[] items = new long?[] { 34L, 2L, 94L, 236L, 41L, 34928L, 222L, 345L, 123L, 1092L, 347L };
