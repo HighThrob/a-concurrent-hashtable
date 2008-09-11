@@ -1,10 +1,24 @@
-﻿using System;
+﻿/*  
+ Copyright 2008 The 'A Concurrent Hashtable' development team  
+ (http://www.codeplex.com/CH/People/ProjectPeople.aspx)
+
+ This library is licensed under the GNU Library General Public License (LGPL).  You should 
+ have received a copy of the license along with the source code.  If not, an online copy
+ of the license can be found at http://www.codeplex.com/CH/license.
+*/
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace ConcurrentHashtable
+namespace TvdP.Collections
 {
+    /// <summary>
+    /// Search key structure for <see cref="ConcurrentDictionary{TKey,TValue}"/>
+    /// </summary>
+    /// <typeparam name="TKey">Type of the key.</typeparam>
+    /// <typeparam name="TValue">Type of the value.</typeparam>
     public struct ConcurrentDictionaryKey<TKey, TValue>
     {
         internal TKey _Key;
@@ -25,6 +39,7 @@ namespace ConcurrentHashtable
             _Value = value;
         }
     }
+
     /// <summary>
     /// A Concurrent <see cref="IDictionary{TKey,TValue}"/> implementation.
     /// </summary>

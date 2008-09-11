@@ -1,11 +1,20 @@
-﻿using System;
+﻿/*  
+ Copyright 2008 The 'A Concurrent Hashtable' development team  
+ (http://www.codeplex.com/CH/People/ProjectPeople.aspx)
+
+ This library is licensed under the GNU Library General Public License (LGPL).  You should 
+ have received a copy of the license along with the source code.  If not, an online copy
+ of the license can be found at http://www.codeplex.com/CH/license.
+*/
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 
 
-namespace ConcurrentHashtable
+namespace TvdP.Collections
 {
     /// <summary>
     /// A singlethreaded segment in a hashtable. 
@@ -273,97 +282,6 @@ namespace ConcurrentHashtable
             }            
         }
 
-        protected void DecrementCount(ConcurrentHashtable<TStored, TSearch> traits)
-        { DecrementCount(traits, 1); }
-
-        Int32 GetPreferedListLength()
-        {
-            var newListLength = 2;
-
-            while (newListLength < _Count)
-                newListLength <<= 1;
-
-            return newListLength << 1;
-        }
-
-        protected void DecrementCount(ConcurrentHashtable<TStored, TSearch> traits, int amount)
-        {
-            var oldListLength = _List.Length;
-            _Count -= amount;
-
-            if (oldListLength > 4 && _Count < (oldListLength >> 2))
-            {
-                //Shrink
-                var oldList = _List;
-                var newListLength = GetPreferedListLength();
-
-                _List = new TStored[newListLength];
-
-                for (int i = 0; i != oldListLength; ++i)
-                    if (!traits.IsEmpty(ref oldList[i]))
-                        DirectInsert(ref oldList[i], traits);
-
-                traits.EffectTotalAllocatedSpace(newListLength - oldListLength);
-            }
-        }
-
-        private void IncrementCount(ConcurrentHashtable<TStored, TSearch> traits)
-        {
-            var oldListLength = _List.Length;
-
-            if (++_Count >= (oldListLength - (oldListLength >> 2)))
-            {
-                //Grow
-                var oldList = _List;
-                var newListLength = GetPreferedListLength();
-
-                _List = new TStored[newListLength];
-
-                for (int i = 0; i != oldListLength; ++i)
-                    if (!traits.IsEmpty(ref oldList[i]))
-                        DirectInsert(ref oldList[i], traits);
-
-                traits.EffectTotalAllocatedSpace(newListLength - oldListLength);
-            }
-        }
-
-
-        private void DirectInsert(ref TStored item, ConcurrentHashtable<TStored, TSearch> traits)
-        {
-            var mask = (UInt32)(_List.Length - 1);
-            var searchHash = traits.GetHashCode(ref item);
-            var i = searchHash & mask;
-
-            if (traits.IsEmpty(ref _List[i]))
-            {
-                _List[i] = item;
-                return;
-            }
-
-            var firstHash = traits.GetHashCode(ref _List[i]);
-            var storedItemHash = firstHash;
-            var searchHashDiff = (searchHash - firstHash) & mask;
-
-            while(true)
-            {
-                i = (i + 1) & mask;
-
-                if (traits.IsEmpty(ref _List[i]))
-                {
-                    _List[i] = item;
-                    return;
-                }
-
-                storedItemHash = traits.GetHashCode(ref _List[i]);
-
-                if (((storedItemHash - firstHash) & mask) > searchHashDiff)
-                {
-                    InsertItemAtIndex(mask, i, item, traits);
-                    return;
-                }                
-            }
-        }
-
         private void InsertItemAtIndex(UInt32 mask, UInt32 i, TStored itemCopy, ConcurrentHashtable<TStored, TSearch> traits)
         {
             while (true)
@@ -379,12 +297,93 @@ namespace ConcurrentHashtable
 
                 if (traits.IsEmpty(ref _List[i]))
                 {
-                    _List[i] = itemCopy;                    
+                    _List[i] = itemCopy;
                     return;
                 }
             }
         }
 
+        private void ResizeList(ConcurrentHashtable<TStored, TSearch> traits, int oldListLength)
+        {
+            var oldList = _List;
+
+            var newListLength = 2;
+
+            while (newListLength < _Count)
+                newListLength <<= 1;
+
+            newListLength <<= 1;
+
+            _List = new TStored[newListLength];
+
+            var mask = (UInt32)(newListLength - 1);
+
+            for (int i = 0; i != oldListLength; ++i)
+                if (!traits.IsEmpty(ref oldList[i]))
+                {                    
+                    var searchHash = traits.GetHashCode(ref oldList[i]);
+
+                    //j is prefered insertion pos in new list.
+                    var j = searchHash & mask;
+
+                    if (traits.IsEmpty(ref _List[j]))
+                        _List[j] = oldList[i];
+                    else
+                    {
+                        var firstHash = traits.GetHashCode(ref _List[j]);
+                        var storedItemHash = firstHash;
+                        var searchHashDiff = (searchHash - firstHash) & mask;
+
+                        while (true)
+                        {
+                            j = (j + 1) & mask;
+
+                            if (traits.IsEmpty(ref _List[j]))
+                            {
+                                _List[j] = oldList[i];
+                                break;
+                            }
+
+                            storedItemHash = traits.GetHashCode(ref _List[j]);
+
+                            if (((storedItemHash - firstHash) & mask) > searchHashDiff)
+                            {
+                                InsertItemAtIndex(mask, j, oldList[i], traits);
+                                break;
+                            }
+                        }
+                    }
+                }                   
+
+            traits.EffectTotalAllocatedSpace(newListLength - oldListLength);
+        }
+
+        protected void DecrementCount(ConcurrentHashtable<TStored, TSearch> traits, int amount)
+        {
+            var oldListLength = _List.Length;
+            _Count -= amount;
+
+            if (oldListLength > 4 && _Count < (oldListLength >> 2))
+                //Shrink
+                ResizeList(traits, oldListLength);
+        }
+
+        protected void DecrementCount(ConcurrentHashtable<TStored, TSearch> traits)
+        { DecrementCount(traits, 1); }
+
+        private void IncrementCount(ConcurrentHashtable<TStored, TSearch> traits)
+        {
+            var oldListLength = _List.Length;
+
+            if (++_Count >= (oldListLength - (oldListLength >> 2)))
+                //Grow
+                ResizeList(traits, oldListLength);
+        }
+
+        /// <summary>
+        /// Remove any excess allocated space
+        /// </summary>
+        /// <param name="traits"></param>
         internal void Trim(ConcurrentHashtable<TStored, TSearch> traits)
         { DecrementCount(traits, 0); }
     }
