@@ -1,10 +1,23 @@
-﻿using System;
+﻿/*  
+ Copyright 2008 The 'A Concurrent Hashtable' development team  
+ (http://www.codeplex.com/CH/People/ProjectPeople.aspx)
+
+ This library is licensed under the GNU Library General Public License (LGPL).  You should 
+ have received a copy of the license along with the source code.  If not, an online copy
+ of the license can be found at http://www.codeplex.com/CH/license.
+*/
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace ConcurrentHashtable
+namespace TvdP.Collections
 {
+    /// <summary>
+    /// Entry item type for <see cref="WeakDictionaryStrongKeys{TKey,TValue}"/>. 
+    /// </summary>
+    /// <typeparam name="TKey">Type of keys of the <see cref="WeakDictionaryStrongKeys{TKey,TValue}"/>.</typeparam>
     public struct ConcurrentWeakDictionaryStrongKeysItem<TKey>
     {
         internal UInt32 _Hash;
@@ -19,6 +32,10 @@ namespace ConcurrentHashtable
         }
     }
 
+    /// <summary>
+    /// Search key for <see cref="WeakDictionaryStrongKeys{TKey,TValue}"/>.
+    /// </summary>
+    /// <typeparam name="TKey">Type of keys of the <see cref="WeakDictionaryStrongKeys{TKey,TValue}"/>.</typeparam>
     public struct ConcurrentWeakDictionaryStrongKeysKey<TKey>
     {
         internal UInt32 _Hash;
@@ -32,7 +49,13 @@ namespace ConcurrentHashtable
     }
 
 
-    public sealed class ConcurrentWeakDictionaryStrongKeys<TKey,TValue> : ConcurrentWeakHashtable<ConcurrentWeakDictionaryStrongKeysItem<TKey>,ConcurrentWeakDictionaryStrongKeysKey<TKey>>
+    /// <summary>
+    /// A dictionary that has weakreferences to it's values. If a value gets garbage collected
+    /// then the entry will be removed from the dictionary. 
+    /// </summary>
+    /// <typeparam name="TKey">Type of the keys.</typeparam>
+    /// <typeparam name="TValue">Type of the values. This must be a reference type.</typeparam>
+    public sealed class ConcurrentWeakDictionaryStrongKeys<TKey, TValue> : ConcurrentWeakHashtable<ConcurrentWeakDictionaryStrongKeysItem<TKey>, ConcurrentWeakDictionaryStrongKeysKey<TKey>>
         where TValue : class
     {
         #region Constructors
@@ -233,6 +256,5 @@ namespace ConcurrentHashtable
         { base.Clear(); }
 
         #endregion
-
     }
 }

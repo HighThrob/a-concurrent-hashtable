@@ -1,11 +1,25 @@
-﻿using System;
+﻿/*  
+ Copyright 2008 The 'A Concurrent Hashtable' development team  
+ (http://www.codeplex.com/CH/People/ProjectPeople.aspx)
+
+ This library is licensed under the GNU Library General Public License (LGPL).  You should 
+ have received a copy of the license along with the source code.  If not, an online copy
+ of the license can be found at http://www.codeplex.com/CH/license.
+*/
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace ConcurrentHashtable
+namespace TvdP.Collections
 {
+    /// <summary>
+    /// Base class for concurrent hashtable implementations
+    /// </summary>
+    /// <typeparam name="TStored">Type of the items stored in the hashtable.</typeparam>
+    /// <typeparam name="TSearch">Type of the key to search with.</typeparam>
     public abstract class ConcurrentHashtable<TStored, TSearch>
     {
         protected ConcurrentHashtable()
@@ -14,12 +28,12 @@ namespace ConcurrentHashtable
         protected virtual void Initialize()
         {
             var minSegments = MinSegments;
-            var meanSegmentAllocatedSpace = MeanSegmentAllocatedSpace;
+            var segmentAllocatedSpace = MinSegmentAllocatedSpace;
 
-            _CurrentRange = CreateSegmentRange(minSegments, meanSegmentAllocatedSpace);
+            _CurrentRange = CreateSegmentRange(minSegments, segmentAllocatedSpace);
             _NewRange = _CurrentRange;
             _SwitchPoint = 0;
-            _AllocatedSpace = minSegments * meanSegmentAllocatedSpace;
+            _AllocatedSpace = minSegments * segmentAllocatedSpace;
         }
 
         internal virtual Segmentrange<TStored, TSearch> CreateSegmentRange(int segmentCount, int initialSegmentSize)
@@ -265,6 +279,7 @@ namespace ConcurrentHashtable
         #region Table Maintenance methods
 
         protected virtual Int32 MinSegments { get { return 4; } }
+        protected virtual Int32 MinSegmentAllocatedSpace { get { return 4; } }
         protected virtual Int32 MeanSegmentAllocatedSpace { get { return 32; } }
 
         bool SegmentationAdjustmentNeeded()
@@ -290,6 +305,8 @@ namespace ConcurrentHashtable
         {
             try
             {
+                //in case of a sudden loss of almost all content we
+                //may need to do this muliple times.
                 while (SegmentationAdjustmentNeeded())
                 {
                     var meanSegmentAllocatedSpace = MeanSegmentAllocatedSpace;

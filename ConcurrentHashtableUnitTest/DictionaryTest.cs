@@ -1,13 +1,21 @@
-﻿using System;
+﻿/*  
+ Copyright 2008 The 'A Concurrent Hashtable' development team  
+ (http://www.codeplex.com/CH/People/ProjectPeople.aspx)
+
+ This library is licensed under the GNU Library General Public License (LGPL).  You should 
+ have received a copy of the license along with the source code.  If not, an online copy
+ of the license can be found at http://www.codeplex.com/CH/license.
+*/
+
+using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ConcurrentHashtable;
 using SCG = System.Collections.Generic;
 using System.Threading;
 
-namespace ConcurrentHashtableUnitTest
+namespace TvdP.Collections
 {
     [TestClass]
     public class DictionaryTest
@@ -15,7 +23,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void DictionaryAdd()
         {
-            var dictionary = new ConcurrentHashtable.ConcurrentDictionary<int, string>();
+            var dictionary = new ConcurrentDictionary<int, string>();
 
             dictionary.Add(10, "ABC");
             string result;
@@ -35,7 +43,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void DictionaryContainsKey()
         {
-            var dictionary = new ConcurrentHashtable.ConcurrentDictionary<int, string>();
+            var dictionary = new ConcurrentDictionary<int, string>();
 
             dictionary.Add(10, "ABC");
 
@@ -46,7 +54,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void DictionaryKeys()
         {
-            var dictionary = new ConcurrentHashtable.ConcurrentDictionary<int, string>();
+            var dictionary = new ConcurrentDictionary<int, string>();
 
             dictionary.Add(10, "ABC");
             dictionary.Add(2, "DEF");
@@ -62,7 +70,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void DictionaryRemove()
         {
-            var dictionary = new ConcurrentHashtable.ConcurrentDictionary<int, string>();
+            var dictionary = new ConcurrentDictionary<int, string>();
 
             dictionary.Add(10, "ABC");
             dictionary.Add(2, "DEF");
@@ -76,7 +84,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void DictionaryTryGetValue()
         {
-            var dictionary = new ConcurrentHashtable.ConcurrentDictionary<int, string>();
+            var dictionary = new ConcurrentDictionary<int, string>();
 
             dictionary.Add(10, "ABC");
 
@@ -90,7 +98,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void DictionaryValues()
         {
-            var dictionary = new ConcurrentHashtable.ConcurrentDictionary<int, string>();
+            var dictionary = new ConcurrentDictionary<int, string>();
 
             dictionary.Add(10, "ABC");
             dictionary.Add(2, "DEF");
@@ -105,7 +113,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void DictionaryIndexer()
         {
-            var dictionary = new ConcurrentHashtable.ConcurrentDictionary<int, string>();
+            var dictionary = new ConcurrentDictionary<int, string>();
 
             dictionary[10] = "QEW";
             dictionary[2] = "DEF";
@@ -127,7 +135,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void DictionaryAdd2()
         {
-            var dictionary = new ConcurrentHashtable.ConcurrentDictionary<int, string>();
+            var dictionary = new ConcurrentDictionary<int, string>();
 
             dictionary.Add(new KeyValuePair<int,string>(10, "ABC"));
             string result;
@@ -148,7 +156,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void DictionaryClear()
         {
-            var dictionary = new ConcurrentHashtable.ConcurrentDictionary<int, string>();
+            var dictionary = new ConcurrentDictionary<int, string>();
 
             dictionary.Add(10, "ABC");
             dictionary.Add(2, "DEF");
@@ -161,7 +169,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void DictionaryContains()
         {
-            var dictionary = new ConcurrentHashtable.ConcurrentDictionary<int, string>();
+            var dictionary = new ConcurrentDictionary<int, string>();
 
             dictionary.Add(10, "ABC");
 
@@ -173,7 +181,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void DictionaryCopyTo()
         {
-            var dictionary = new ConcurrentHashtable.ConcurrentDictionary<int, string>();
+            var dictionary = new ConcurrentDictionary<int, string>();
 
             dictionary.Add(10, "ABC");
             dictionary.Add(2, "DEF");
@@ -186,14 +194,14 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void DictionaryIsReadOnly()
         {
-            var dictionary = new ConcurrentHashtable.ConcurrentDictionary<int, string>();
+            var dictionary = new ConcurrentDictionary<int, string>();
             Assert.IsFalse(dictionary.IsReadOnly, "ConcurrentDictionary should be read-write.");
         }
 
         [TestMethod]
         public void DictionaryRemove2()
         {
-            var dictionary = new ConcurrentHashtable.ConcurrentDictionary<int, string>();
+            var dictionary = new ConcurrentDictionary<int, string>();
 
             dictionary.Add(10, "ABC");
             dictionary.Add(2, "DEF");
@@ -207,7 +215,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void DictionaryEnumerator()
         {
-            var dictionary = new ConcurrentHashtable.ConcurrentDictionary<int, string>();
+            var dictionary = new ConcurrentDictionary<int, string>();
 
             dictionary.Add(10, "ABC");
             dictionary.Add(2, "DEF");
@@ -225,7 +233,7 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod]
         public void DictionaryEnumerator2()
         {
-            var dictionary = new ConcurrentHashtable.ConcurrentDictionary<int, string>();
+            var dictionary = new ConcurrentDictionary<int, string>();
 
             dictionary.Add(10, "ABC");
             dictionary.Add(2, "DEF");

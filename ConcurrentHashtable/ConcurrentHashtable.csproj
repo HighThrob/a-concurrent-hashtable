@@ -8,7 +8,7 @@
     <ProjectGuid>{BECE7D18-E126-46C4-86C1-E37E6ADF88FD}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ConcurrentHashtable</RootNamespace>
+    <RootNamespace>TvdP.Collections</RootNamespace>
     <AssemblyName>ConcurrentHashtable</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
