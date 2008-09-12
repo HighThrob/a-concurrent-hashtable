@@ -22,9 +22,17 @@ namespace TvdP.Collections
     /// <typeparam name="TSearch">Type of the key to search with.</typeparam>
     public abstract class ConcurrentHashtable<TStored, TSearch>
     {
+        /// <summary>
+        /// Constructor (protected)
+        /// </summary>
+        /// <remarks>Use Initialize method after construction.</remarks>
         protected ConcurrentHashtable()
         {}
 
+        /// <summary>
+        /// Initialize the newly created ConcurrentHashtable. Invoke in final (sealed) constructor
+        /// or Create method.
+        /// </summary>
         protected virtual void Initialize()
         {
             var minSegments = MinSegments;
@@ -36,6 +44,12 @@ namespace TvdP.Collections
             _AllocatedSpace = minSegments * segmentAllocatedSpace;
         }
 
+        /// <summary>
+        /// Create a segment range
+        /// </summary>
+        /// <param name="segmentCount">Number of segments in range.</param>
+        /// <param name="initialSegmentSize">Number of slots allocated initialy in each segment.</param>
+        /// <returns>The created <see cref="Segmentrange{TStored,TSearch}"/> instance.</returns>
         internal virtual Segmentrange<TStored, TSearch> CreateSegmentRange(int segmentCount, int initialSegmentSize)
         { return Segmentrange<TStored, TSearch>.Create(segmentCount, initialSegmentSize); }
 
@@ -52,7 +66,7 @@ namespace TvdP.Collections
         internal Segmentrange<TStored, TSearch> _CurrentRange;
 
         /// <summary>
-        /// While adjusting the segmentation this field will hold a boundary
+        /// While adjusting the segmentation this field will hold a boundary.
         /// Clients accessing items with a key hash value below this boundary (unsigned compared)
         /// will access _NewRange. The others will access _CurrentRange
         /// </summary>
@@ -60,19 +74,55 @@ namespace TvdP.Collections
 
         #region Traits
         
+        //Methods used by Segment objects that tell them how to treat stored items and search keys.
+
+        /// <summary>
+        /// Get a hashcode for given storeable item.
+        /// </summary>
+        /// <param name="item">Reference to the item to get a hash value for.</param>
+        /// <returns>The hash value as an <see cref="UInt32"/>.</returns>
+        /// <remarks>
+        /// The hash returned should be properly randomized hash. The standard GetHashCode methods are usually not good enough.
+        /// A storeable item and a matching search key should return the same hash code.
+        /// So the statement <code>Equals(storeableItem, searchKey) ? GetHashCode(storeableItem) == GetHashCode(searchKey) : true </code> should always be true;
+        /// </remarks>
         internal protected abstract UInt32 GetHashCode(ref TStored item);
+
+        /// <summary>
+        /// Get a hashcode for given search key.
+        /// </summary>
+        /// <param name="key">Reference to the key to get a hash value for.</param>
+        /// <returns>The hash value as an <see cref="UInt32"/>.</returns>
+        /// <remarks>
+        /// The hash returned should be properly randomized hash. The standard GetHashCode methods are usually not good enough.
+        /// A storeable item and a matching search key should return the same hash code.
+        /// So the statement <code>Equals(storeableItem, searchKey) ? GetHashCode(storeableItem) == GetHashCode(searchKey) : true </code> should always be true;
+        /// </remarks>
         internal protected abstract UInt32 GetHashCode(ref TSearch key);
+
+        /// <summary>
+        /// Compares a storeable item to a search key. Should return true if they match.
+        /// </summary>
+        /// <param name="item">Reference to the storeable item to compare.</param>
+        /// <param name="key">Reference to the search key to compare.</param>
+        /// <returns>True if the storeable item and search key match; false otherwise.</returns>
         internal protected abstract bool Equals(ref TStored item, ref TSearch key);
+
+        /// <summary>
+        /// Compares two storeable items for equality.
+        /// </summary>
+        /// <param name="item1">Reference to the first storeable item to compare.</param>
+        /// <param name="item2">Reference to the second storeable item to compare.</param>
+        /// <returns>True if the two soreable items should be regarded as equal.</returns>
         internal protected abstract bool Equals(ref TStored item1, ref TStored item2);
 
         /// <summary>
         /// Indicates if a specific item reference contains a valid item.
         /// </summary>
-        /// <param name="item"></param>
-        /// <returns></returns>
+        /// <param name="item">The storeable item reference to check.</param>
+        /// <returns>True if the reference doesn't refer to a valid item; false otherwise.</returns>
+        /// <remarks>The statement <code>IsEmpty(default(TStoredI))</code> should always be true.</remarks>
         internal protected abstract bool IsEmpty(ref TStored item);
-
-        internal protected abstract TStored EmptyItem { get; }
 
         #endregion
 
@@ -205,28 +255,80 @@ namespace TvdP.Collections
         //These methods require a lock on SyncRoot. They will not block regular per segment accessors (for long)
 
         /// <summary>
-        /// Gets an IEnumerable to iterate over all items in all segments.
-        /// A lock should be aquired and held on SyncRoot while this IEnumerable is being used
+        /// Enumerates all segments in _CurrentRange and locking them before yielding them and resleasing the lock afterwards
+        /// The order in which the segments are returned is undefined.
+        /// Lock SyncRoot before using this enumerable.
         /// </summary>
         /// <returns></returns>
+        internal IEnumerable<Segment<TStored, TSearch>> EnumerateAmorphLockedSegments()
+        {
+            //if segments are locked a queue will be created to try them later
+            //this is so that we can continue with other not locked segments.
+            Queue<Segment<TStored, TSearch>> lockedSegmentIxs = null;
+
+            for (int i = 0, end = _CurrentRange.Count; i != end; ++i)
+            {
+                var segment = _CurrentRange.GetSegmentByIndex(i);
+
+                if (segment.Lock())
+                {
+                    try { yield return segment; }
+                    finally { segment.Unlock(); }
+                }
+                else
+                {
+                    if (lockedSegmentIxs == null)
+                        lockedSegmentIxs = new Queue<Segment<TStored, TSearch>>();
+
+                    lockedSegmentIxs.Enqueue(segment);
+                }
+            }
+
+            if (lockedSegmentIxs != null)
+            {
+                var ctr = lockedSegmentIxs.Count;
+
+                while (lockedSegmentIxs.Count != 0)
+                {
+                    //once we retried them all and we are still not done.. wait a bit.
+                    if (ctr-- == 0)
+                    {
+                        Thread.Sleep(0);
+                        ctr = lockedSegmentIxs.Count;
+                    }
+
+                    var segment = lockedSegmentIxs.Dequeue();
+
+                    if (segment.Lock())
+                    {
+                        try { yield return segment; }
+                        finally { segment.Unlock(); }
+                    }
+                    else
+                        lockedSegmentIxs.Enqueue(segment);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets an IEnumerable to iterate over all items in all segments.
+        /// </summary>
+        /// <returns></returns>
+        /// <remarks>
+        /// A lock should be aquired and held on SyncRoot while this IEnumerable is being used.
+        /// The order in which the items are returned is undetermined.
+        /// </remarks>
         protected IEnumerable<TStored> Items
         {
             get
             {
-                for (int i = 0, end = _CurrentRange.Count; i != end; ++i)
+                foreach (var segment in EnumerateAmorphLockedSegments())
                 {
-                    var segment = _CurrentRange.GetSegmentByIndex(i);
-
-                    while (!segment.Lock())
-                        Thread.Sleep(0);
-
                     int j = -1;
                     TStored foundItem;
 
                     while ((j = segment.GetNextItem(j, out foundItem, this)) >= 0)
                         yield return foundItem;
-
-                    segment.Unlock();
                 }
             }
         }
@@ -234,23 +336,14 @@ namespace TvdP.Collections
         /// <summary>
         /// Removes all items from the collection. 
         /// Aquires a lock on SyncRoot before it does it's thing.
+        /// When this method returns and multiple threads have access to this table it
+        /// is not guaranteed that the table is actually empty.
         /// </summary>
         protected void Clear()
-        {
-            lock (SyncRoot)
-            {
-                for( int i=0, end = _CurrentRange.Count; i != end; ++i )
-                {
-                    var segment = _CurrentRange.GetSegmentByIndex(i);
-
-                    while (!segment.Lock())
-                        Thread.Sleep(0);
-
+        { 
+            lock(SyncRoot)
+                foreach(var segment in EnumerateAmorphLockedSegments())
                     segment.Clear(this);
-
-                    segment.Unlock();
-                }
-            }
         }
 
         /// <summary>
@@ -266,6 +359,7 @@ namespace TvdP.Collections
                 {
                     Int32 count = 0;
 
+                    //Don't need to lock a segment to get the count.
                     for (int i = 0, end = _CurrentRange.Count; i != end; ++i)
                         count += _CurrentRange.GetSegmentByIndex(i).Count;
 
@@ -278,10 +372,25 @@ namespace TvdP.Collections
 
         #region Table Maintenance methods
 
+        /// <summary>
+        /// Gives the minimum number of segments a hashtable can contain. This should be 1 or more and always a power of 2.
+        /// </summary>
         protected virtual Int32 MinSegments { get { return 4; } }
+
+        /// <summary>
+        /// Gives the minimum number of allocated item slots per segment. This should be 1 or more and always a power of 2.
+        /// </summary>
         protected virtual Int32 MinSegmentAllocatedSpace { get { return 4; } }
+
+        /// <summary>
+        /// Gives the prefered number of allocated item slots per segment. This should 4 or more and always a power of 2.
+        /// </summary>
         protected virtual Int32 MeanSegmentAllocatedSpace { get { return 32; } }
 
+        /// <summary>
+        /// Determines if a segmentation adjustment is needed.
+        /// </summary>
+        /// <returns>True</returns>
         bool SegmentationAdjustmentNeeded()
         {
             var minSegments = MinSegments;
@@ -293,14 +402,34 @@ namespace TvdP.Collections
             return newSpace > (meanSpace << 1) || newSpace <= (meanSpace >> 1);            
         }
 
+        /// <summary>
+        /// Bool as int (for interlocked functions) that is true if a Segmentation assesment is pending.
+        /// </summary>
+        Int32 _AssessSegmentationPending;
+
+        /// <summary>
+        /// The total allocated number of item slots. Filled with nonempty items or not.
+        /// </summary>
+        Int32 _AllocatedSpace;
+
+        /// <summary>
+        /// When a segment resizes it uses this method to inform the hashtable of the change in allocated space.
+        /// </summary>
+        /// <param name="effect"></param>
         internal void EffectTotalAllocatedSpace(Int32 effect)
         {
+            //this might be a point of contention. But resizing of segments should happen (far) less often
+            //than inserts and removals and therefore this should not pose a problem. 
             Interlocked.Add(ref _AllocatedSpace, effect);
 
             if ( SegmentationAdjustmentNeeded() && Interlocked.Exchange(ref _AssessSegmentationPending, 1) == 0 )
                     ThreadPool.QueueUserWorkItem(AssessSegmentation);
         }
 
+        /// <summary>
+        /// Checks if segmentation needs to be adjusted and if so performs the adjustment.
+        /// </summary>
+        /// <param name="dummy"></param>
         void AssessSegmentation(object dummy)
         {
             try
@@ -328,14 +457,12 @@ namespace TvdP.Collections
                 EffectTotalAllocatedSpace(0);
             }
         }
-
-        Int32 _AllocatedSpace;
-        Int32 _AssessSegmentationPending;
-
+              
         /// <summary>
         /// Adjusts the segmentation to the new segment count
         /// </summary>
         /// <param name="newSegmentCount">The new number of segments to use. This must be a power of 2.</param>
+        /// <param name="segmentSize">The number of item slots to reserve in each segment.</param>
         void SetSegmentation(Int32 newSegmentCount, Int32 segmentSize)
         {
             lock (SyncRoot)
@@ -345,6 +472,9 @@ namespace TvdP.Collections
                     //create the new range
                     Segmentrange<TStored, TSearch> newRange = CreateSegmentRange(newSegmentCount, segmentSize);
 
+                    //increase total allocated space now. We can do this safely
+                    //because at this point _AssessSegmentationPending flag will be true,
+                    //preventing an inmediate reassesment.
                     Interlocked.Add(ref _AllocatedSpace, newSegmentCount * segmentSize);
 
                     //lock all new segments

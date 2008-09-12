@@ -15,32 +15,38 @@ using System.Threading;
 
 namespace TvdP.Collections
 {
+    /// <summary>
+    /// Base class for weak concurrent hashtable implementations. 
+    /// </summary>
+    /// <typeparam name="TStored">Type of the items stored in the hashtable.</typeparam>
+    /// <typeparam name="TSearch">Type of the key to search with.</typeparam>
+    /// <remarks>
+    /// This class is an extention of <see cref="ConcurrentHashtable{TStored,TSearch}"/>. It will detect
+    /// a run of the garbage collector and subsequently check all items in the table if they are marked as garbage.
+    /// Each item that is marked as garbage will be removed from the table. 
+    /// </remarks>
     public abstract class ConcurrentWeakHashtable<TStored, TSearch> : ConcurrentHashtable<TStored, TSearch>, IMaintainable
     {
         /// <summary>
-        /// Table maintenance, removes all GC'd entries.
+        /// Table maintenance, removes all items marked as Garbage.
         /// </summary>
         public virtual void DoMaintenance()
         {
             lock (SyncRoot)
-            {
-                for (int i = 0, end = _CurrentRange.Count; i != end; ++i)
-                {
-                    var segment = (WeakSegment<TStored, TSearch>)_CurrentRange.GetSegmentByIndex(i);
-
-                    while (!segment.Lock())
-                        Thread.Sleep(0);
-
-                    segment.DisposeGarbage(this);
-
-                    segment.Unlock();
-                }
-            }
+                foreach (var segment in EnumerateAmorphLockedSegments())
+                    ((WeakSegment<TStored, TSearch>)segment).DisposeGarbage(this);
         }
 
+        /// <summary>
+        /// Initialize the newly created ConcurrentHashtable. Invoke in final (sealed) constructor
+        /// or Create method.
+        /// </summary>
         protected override void Initialize()
         {
             base.Initialize();
+
+            //registers this table with the ConcurrentWeakHashtableHelper.
+            //that class will invoke our DoMaintenance() method when a GC is detected.
             ConcurrentWeakHashtableHelper.Register(this);
         }
 
@@ -48,7 +54,7 @@ namespace TvdP.Collections
         /// Indicates if a specific content item should be treated as garbage and removed.
         /// </summary>
         /// <param name="item">The item to judge.</param>
-        /// <returns>A boolean value that is true if the item is not empty and should be treated as garbage; otherwise false.</returns>
+        /// <returns>A boolean value that is true if the item is not empty and should be treated as garbage; false otherwise.</returns>
         internal protected abstract bool IsGarbage(ref TStored item);
 
         /// <summary>

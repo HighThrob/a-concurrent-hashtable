@@ -17,7 +17,7 @@ namespace TvdP.Collections
 {
     /// <summary>
     /// Helper class for ConcurrentWeakHashtable. Makes sure that its DoMaintenance method
-    /// is called when the GarbageCollector has collected garbage.
+    /// gets called when the GarbageCollector has collected garbage.
     /// </summary>
     internal static class ConcurrentWeakHashtableHelper
     {

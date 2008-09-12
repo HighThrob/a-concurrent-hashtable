@@ -68,7 +68,7 @@ namespace TvdP.Collections
 
             if (traits.IsEmpty(ref _List[i]))
             {
-                item = traits.EmptyItem;
+                item = default(TStored);
                 return false;
             }
 
@@ -90,7 +90,7 @@ namespace TvdP.Collections
                     traits.IsEmpty(ref _List[i]) 
                     || (((storedItemHash = traits.GetHashCode(ref _List[i])) - firstHash) & mask) > searchHashDiff)
                 {
-                    item = traits.EmptyItem;
+                    item = default(TStored);
                     return false;
                 }
             }
@@ -194,7 +194,7 @@ namespace TvdP.Collections
 
             if (traits.IsEmpty(ref _List[i]))
             {
-                item = traits.EmptyItem;
+                item = default(TStored);
                 return false;
             }
 
@@ -216,7 +216,7 @@ namespace TvdP.Collections
 
                 if (traits.IsEmpty(ref _List[i]))
                 {
-                    item = traits.EmptyItem;
+                    item = default(TStored);
                     return false;
                 }
 
@@ -224,7 +224,7 @@ namespace TvdP.Collections
 
                 if (((storedItemHash - firstHash) & mask) > searchHashDiff)
                 {
-                    item = traits.EmptyItem;
+                    item = default(TStored);
                     return false;
                 }
             }
@@ -241,13 +241,20 @@ namespace TvdP.Collections
                 }
             }
 
-            item = traits.EmptyItem;
+            item = default(TStored);
             return -1;
         }
 
         public void Clear(ConcurrentHashtable<TStored, TSearch> traits)
         {
+            var oldList = _List;
             _List = new TStored[4];
+
+            var effect = _List.Length - oldList.Length;
+
+            if (effect != 0)
+                traits.EffectTotalAllocatedSpace(effect);
+
             _Count = 0;
         }
 
@@ -271,7 +278,7 @@ namespace TvdP.Collections
             {
                 if (traits.IsEmpty(ref _List[j]) || (traits.GetHashCode(ref _List[j]) & mask) == j)
                 {
-                    _List[i] = traits.EmptyItem;                    
+                    _List[i] = default(TStored);                    
                     break;
                 }
 
