@@ -109,11 +109,6 @@ namespace TvdP.Collections
                 return false;
             }
 
-            internal protected override long? EmptyItem
-            {
-                get { return default(long?); }
-            }
-
             #endregion
         }
 

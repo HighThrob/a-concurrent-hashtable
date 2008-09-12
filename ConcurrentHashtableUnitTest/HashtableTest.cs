@@ -95,9 +95,6 @@ namespace TvdP.Collections
             internal protected override bool IsGarbage(ref KeyValuePair<int, string>? item)
             { return false; }
 
-            internal protected override KeyValuePair<int, string>? EmptyItem
-            { get { return null; } }
-
             public new bool FindItem(ref int searchKey, out KeyValuePair<int, string>? item)
             { return base.FindItem(ref searchKey, out item); }
 
