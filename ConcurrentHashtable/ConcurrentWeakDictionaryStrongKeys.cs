@@ -60,10 +60,18 @@ namespace TvdP.Collections
     {
         #region Constructors
 
+        /// <summary>
+        /// Contructs a <see cref="ConcurrentWeakDictionaryStrongKeys{TKey,TValue}"/> instance, using the default <see cref="IEqualityComparer{TKey}"/> to compare keys.
+        /// </summary>
         public ConcurrentWeakDictionaryStrongKeys()
             : this(EqualityComparer<TKey>.Default)
         { }
 
+        /// <summary>
+        /// Contructs a <see cref="ConcurrentWeakDictionaryStrongKeys{TKey,TValue}"/> instance, using a specified <see cref="IEqualityComparer{TKey}"/> to compare keys.
+        /// </summary>
+        /// <param name="comparer">The <see cref="IEqualityComparer{TKey}"/> to compare keys.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="comparer"/> is null.</exception>
         public ConcurrentWeakDictionaryStrongKeys(IEqualityComparer<TKey> comparer)
             : base()
         {

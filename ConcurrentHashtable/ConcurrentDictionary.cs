@@ -67,6 +67,7 @@ namespace TvdP.Collections
         /// Constructs a <see cref="ConcurrentDictionary{TKey,TValue}"/> instance using the specified <see cref="IEqualityComparer{TKey}"/> to compare keys.
         /// </summary>
         /// <param name="comparer">The <see cref="IEqualityComparer{TKey}"/> tp compare keys with.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="comparer"/> is null.</exception>
         public ConcurrentDictionary(IEqualityComparer<TKey> comparer)
             : base()
         {
@@ -240,6 +241,14 @@ namespace TvdP.Collections
             }
         }
 
+        /// <summary>
+        /// Gets or sets the value associated with the specified key.
+        /// </summary>
+        /// <param name="key">The key of the value to get or set.</param>
+        /// <returns>The value associated with the specified key. If the specified key is not found, a get operation throws a KeyNotFoundException, and a set operation creates a new element with the specified key.</returns>
+        /// <remarks>
+        /// When working with multiple threads, that can each potentialy remove the searched for item, a <see cref="KeyNotFoundException"/> can always be expected.
+        /// </remarks>
         public TValue this[TKey key]
         {
             get
@@ -263,6 +272,11 @@ namespace TvdP.Collections
 
         #region ICollection<KeyValuePair<TKey,TValue>> Members
 
+        /// <summary>
+        /// Adds an association to the dictionary.
+        /// </summary>
+        /// <param name="item">A <see cref="KeyValuePair{TKey,TValue}"/> that represents the association to add.</param>
+        /// <exception cref="ArgumentException">An association with an equal key already exists in the dicitonary.</exception>
         public void Add(KeyValuePair<TKey, TValue> item)
         {
             KeyValuePair<TKey, TValue>? newItem = item;
@@ -272,9 +286,21 @@ namespace TvdP.Collections
                 throw new ArgumentException("An element with the same key already exists.");
         }
 
+        /// <summary>
+        /// Removes all items from the dictionary.
+        /// </summary>
+        /// <remarks>WHen working with multiple threads, that each can add items to this dictionary, it is not guaranteed that the dictionary will be empty when this method returns.</remarks>
         public new void Clear()
         { base.Clear(); }
 
+        /// <summary>
+        /// Determines whether the specified association exists in the dictionary.
+        /// </summary>
+        /// <param name="item">The key-value association to search fo in the dicionary.</param>
+        /// <returns>True if item is found in the dictionary; otherwise, false.</returns>
+        /// <remarks>
+        /// This method compares both key and value. It uses the default equality comparer to compare values.
+        /// </remarks>
         public bool Contains(KeyValuePair<TKey, TValue> item)
         {
             KeyValuePair<TKey, TValue>? presentItem;
@@ -284,19 +310,46 @@ namespace TvdP.Collections
                 FindItem(ref searchKey, out presentItem);
         }
 
+        /// <summary>
+        /// Copies all associations of the dictionary to an
+        ///    <see cref="System.Array"/>, starting at a particular <see cref="System.Array"/> index.
+        /// </summary>
+        /// <param name="array">The one-dimensional <see cref="System.Array"/> that is the destination of the associations
+        ///     copied from <see cref="ConcurrentDictionaryKey{TKey,TValue}"/>. The <see cref="System.Array"/> must
+        ///     have zero-based indexing.</param>
+        /// <param name="arrayIndex">The zero-based index in <paramref name="array"/> at which copying begins.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="array"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="arrayIndex"/> is less than 0.</exception>
+        /// <exception cref="ArgumentException"><paramref name="arrayIndex"/> is equal to or greater than the length of <paramref name="array"/>.</exception>
+        /// <exception cref="ArgumentException">The number of associations to be copied
+        /// is greater than the available space from <paramref name="arrayIndex"/> to the end of the destination
+        /// <paramref name="array"/>.</exception>
         public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
         {
             lock (SyncRoot)
-                foreach (var item in Items)
-                    array[arrayIndex++] = item.Value;
+                Items.Select(nkvp => nkvp.Value).ToList().CopyTo(array, arrayIndex);
         }
 
+        /// <summary>
+        /// Gets the number of elements contained in the <see cref="ConcurrentDictionaryKey{TKey,TValue}"/>.
+        /// </summary>
         public new int Count
         { get { return base.Count; } }
 
+        /// <summary>
+        /// Gets a value indicating whether the <see cref="ConcurrentDictionaryKey{TKey,TValue}"/> is read-only, which is always false.
+        /// </summary>
         public bool IsReadOnly
         { get { return false; } }
 
+        /// <summary>
+        /// Removes the specified association from the <see cref="ConcurrentDictionaryKey{TKey,TValue}"/>, comparing both key and value.
+        /// </summary>
+        /// <param name="item">A <see cref="KeyValuePair{TKey,TValue}"/> representing the association to remove.</param>
+        /// <returns>true if the association was successfully removed from the <see cref="ConcurrentDictionaryKey{TKey,TValue}"/>;
+        /// otherwise, false. This method also returns false if the association is not found in
+        /// the original <see cref="ConcurrentDictionaryKey{TKey,TValue}"/>.
+        ///</returns>
         public bool Remove(KeyValuePair<TKey, TValue> item)
         {
             KeyValuePair<TKey, TValue>? oldItem;
@@ -308,6 +361,10 @@ namespace TvdP.Collections
 
         #region IEnumerable<KeyValuePair<TKey,TValue>> Members
 
+        /// <summary>
+        /// Returns an enumerator that iterates through all associations in the <see cref="ConcurrentDictionaryKey{TKey,TValue}"/> at the moment of invocation.
+        /// </summary>
+        /// <returns>A <see cref="IEnumerator{T}"/> that can be used to iterate through the associations.</returns>
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
         {
             lock (SyncRoot)
@@ -318,6 +375,10 @@ namespace TvdP.Collections
 
         #region IEnumerable Members
 
+        /// <summary>
+        /// Returns an enumerator that iterates through all associations in the <see cref="ConcurrentDictionaryKey{TKey,TValue}"/> at the moment of invocation.
+        /// </summary>
+        /// <returns>A <see cref="System.Collections.IEnumerator"/> that can be used to iterate through the associations.</returns>
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         { return GetEnumerator(); }
 
