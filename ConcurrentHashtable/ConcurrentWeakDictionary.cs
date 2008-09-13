@@ -70,6 +70,7 @@ namespace TvdP.Collections
         /// Instatiates a ConcurrentWeakDictionary with an explicit comparer for <typeparamref name="TKey"/>.
         /// </summary>
         /// <param name="comparer">An <see cref="IEqualityComparer{TKey}"/> to comparer keys.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="comparer"/> is null.</exception>
         public ConcurrentWeakDictionary(IEqualityComparer<TKey> comparer)
             : base()
         {

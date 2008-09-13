@@ -69,6 +69,7 @@ namespace TvdP.Collections
         /// Constructs a ConcurrentWeakDictionaryStrongValues instance, using a specified equality comparer for the keys.
         /// </summary>
         /// <param name="comparer">The <see cref="IEqualityComparer{TKey}"/> to compare keys with.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="comparer"/> is null.</exception>
         public ConcurrentWeakDictionaryStrongValues(IEqualityComparer<TKey> comparer)
             : base()
         {
