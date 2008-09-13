@@ -15,12 +15,12 @@ using System.Text;
 namespace TvdP.Collections
 {
     /// <summary>
-    /// 
+    /// An interface for objects that need regular maintenance executed on a background worker thread.
     /// </summary>
     public interface IMaintainable
     {
         /// <summary>
-        /// 
+        /// Method called by a background worker thread to do maintenance deeded by the object.
         /// </summary>
         void DoMaintenance();
     }

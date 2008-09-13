@@ -34,7 +34,7 @@ namespace TvdP.Collections
     /// <summary>
     /// Search key for ConcurrentWeakDictionary
     /// </summary>
-    /// <typeparam name="TKey"></typeparam>
+    /// <typeparam name="TKey">Type of the keys.</typeparam>
     public struct ConcurrentWeakDictionaryKey<TKey>
     {
         internal UInt32 _Hash;
