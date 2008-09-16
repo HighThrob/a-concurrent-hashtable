@@ -129,7 +129,7 @@ namespace TvdP.Collections
 
             Assert.AreEqual(
                 items.Length,
-                segment.Count,                
+                segment._Count,                
                 "Number of items in segment doesn't match number of inserts"
             );
 
@@ -164,7 +164,7 @@ namespace TvdP.Collections
             }
 
             Assert.AreEqual(
-                segment.Count,
+                segment._Count,
                 items.Length,
                 "Number of items in segment doesn't match number of unique inserts"
             );
@@ -218,7 +218,7 @@ namespace TvdP.Collections
 
             segment.Clear(traits);
 
-            Assert.AreEqual(segment.Count, 0, "Expected segment to be empty after Clear().");
+            Assert.AreEqual(segment._Count, 0, "Expected segment to be empty after Clear().");
 
             int[] searchKeys = new int[] { 2, 34928, 1092, 222, 94, 34, 347, 123, 41, 345 };
 
@@ -252,7 +252,7 @@ namespace TvdP.Collections
                 Assert.AreEqual((long?)searchKeys[i], foundItem, "Found item not expected value.");
             }
 
-            Assert.AreEqual(6, segment.Count, "Expected 6 items left.");
+            Assert.AreEqual(6, segment._Count, "Expected 6 items left.");
 
             for (int i = 0, end = searchKeys.Length; i != end; ++i)
             {
@@ -277,7 +277,7 @@ namespace TvdP.Collections
                 Assert.AreEqual((long?)searchKeys3[i], foundItem, "Found item not expected value.");
             }
 
-            Assert.AreEqual(0, segment.Count, "Expected 0 items left.");
+            Assert.AreEqual(0, segment._Count, "Expected 0 items left.");
         }
 
         [TestMethod]
@@ -303,7 +303,7 @@ namespace TvdP.Collections
             }
 
             Assert.AreEqual(
-                segment.Count,
+                segment._Count,
                 items.Length,
                 "Number of items in segment doesn't match number of unique inserts"
             );

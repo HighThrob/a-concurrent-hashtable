@@ -138,13 +138,13 @@ namespace TvdP.Collections
                 Assert.IsFalse(stub.InsertItem(ref newItem, out replacedItem), "All unique item inserts, expected false returned by InsertItem");
             }
 
-            Assert.AreEqual(filler.Count, stub.Count, "Expected Count to be same as number of unique inserts.");
+            Assert.AreEqual(filler.Count, stub.Count, "Expected _Count to be same as number of unique inserts.");
 
             GC.Collect();
 
             Thread.Sleep(1000); // 1 sec
 
-            Assert.AreEqual(filler.Count, stub.Count, "Expected Count to be same as number of unique inserts, even after GC.");
+            Assert.AreEqual(filler.Count, stub.Count, "Expected _Count to be same as number of unique inserts, even after GC.");
 
             foreach (var kvp in filler)
             {
@@ -157,7 +157,7 @@ namespace TvdP.Collections
                 Assert.AreEqual(kvp, replacedItem.Value, "Expected replaced item to be equal to inserted item.");
             }
 
-            Assert.AreEqual(filler.Count, stub.Count, "Expected Count unchanged after only duplicate inserts.");
+            Assert.AreEqual(filler.Count, stub.Count, "Expected _Count unchanged after only duplicate inserts.");
 
             lock (stub.SyncRoot)
             {
@@ -213,7 +213,7 @@ namespace TvdP.Collections
             while (Interlocked.Decrement(ref wait) > 0 && runningThreads != 0); 
 
             Assert.AreEqual(0, runningThreads, "Expected all threads to be finished by now.");
-            Assert.AreEqual(filler.Count, stub.Count, "Expected Count to be equal to number of unique inserted items.");
+            Assert.AreEqual(filler.Count, stub.Count, "Expected _Count to be equal to number of unique inserted items.");
         }
 
         [TestMethod]
@@ -242,13 +242,13 @@ namespace TvdP.Collections
 
             filler = GetFiller();
 
-            Assert.AreEqual(filler.Count, stub.Count, "Expected Count to be same as number of unique inserts.");
+            Assert.AreEqual(filler.Count, stub.Count, "Expected _Count to be same as number of unique inserts.");
 
             GC.Collect();
 
             Thread.Sleep(1000); // 1 sec
 
-            Assert.AreEqual(filler.Count, stub.Count, "Expected Count to be same as number of unique inserts, even after GC.");
+            Assert.AreEqual(filler.Count, stub.Count, "Expected _Count to be same as number of unique inserts, even after GC.");
            
             lock (stub.SyncRoot)
             {
@@ -278,7 +278,7 @@ namespace TvdP.Collections
                 Assert.IsFalse(stub.InsertItem(ref newItem, out replacedItem), "All unique item inserts, expected false returned by InsertItem");
             }
 
-            Assert.AreEqual(filler.Count, stub.Count, "Expected Count to be same as number of unique inserts.");
+            Assert.AreEqual(filler.Count, stub.Count, "Expected _Count to be same as number of unique inserts.");
 
             foreach (var kvp in filler)
             {
@@ -304,7 +304,7 @@ namespace TvdP.Collections
 
             Thread.Sleep(1000); // 1 sec
 
-            Assert.AreEqual(filler.Count, stub.Count, "Expected Count to be same as number of unique inserts, even after GC.");
+            Assert.AreEqual(filler.Count, stub.Count, "Expected _Count to be same as number of unique inserts, even after GC.");
 
             foreach (var kvp in filler)
             {
@@ -399,13 +399,13 @@ namespace TvdP.Collections
                 Assert.AreNotEqual(kvp, replacedItem.Value, "Expected replaced item to be original item.");
             }
 
-            Assert.AreEqual(filler.Count, stub.Count, "Expected Count to be same as number of unique inserts.");
+            Assert.AreEqual(filler.Count, stub.Count, "Expected _Count to be same as number of unique inserts.");
 
             GC.Collect();
 
             Thread.Sleep(1000); // 1 sec
 
-            Assert.AreEqual(filler.Count, stub.Count, "Expected Count to be same as number of unique inserts, even after GC.");
+            Assert.AreEqual(filler.Count, stub.Count, "Expected _Count to be same as number of unique inserts, even after GC.");
 
             foreach (var kvp in tiller)
             {
@@ -491,13 +491,13 @@ namespace TvdP.Collections
                 }
             }
 
-            Assert.AreEqual(filler.Count, stub.Count, "Expected Count to be same as number of unique inserts.");
+            Assert.AreEqual(filler.Count, stub.Count, "Expected _Count to be same as number of unique inserts.");
 
             GC.Collect();
 
             Thread.Sleep(1000); // 1 sec
 
-            Assert.AreEqual(filler.Count, stub.Count, "Expected Count to be same as number of unique inserts, even after GC.");
+            Assert.AreEqual(filler.Count, stub.Count, "Expected _Count to be same as number of unique inserts, even after GC.");
 
             foreach (var kvp in tiller)
             {
@@ -519,7 +519,7 @@ namespace TvdP.Collections
                 Assert.AreEqual(kvp, removedItem.Value, "Expected removed item to be equal to inserted item.");
             }
 
-            Assert.AreEqual(0, stub.Count, "Expected Count to be 0 after all inserted items removed, even after GC.");
+            Assert.AreEqual(0, stub.Count, "Expected _Count to be 0 after all inserted items removed, even after GC.");
 
             //removing by multiple threads.
             foreach (var kvp in filler)
@@ -596,17 +596,17 @@ namespace TvdP.Collections
                 Assert.AreEqual(kvp, replacedItem.Value, "Expected oldest item to be equal to inserted item.");
             }
 
-            Assert.AreEqual(filler.Count, stub.Count, "Expected Count to be same as number of unique inserts.");
+            Assert.AreEqual(filler.Count, stub.Count, "Expected _Count to be same as number of unique inserts.");
 
             GC.Collect();
 
             Thread.Sleep(1000); // 1 sec
 
-            Assert.AreEqual(filler.Count, stub.Count, "Expected Count to be same as number of unique inserts, even after GC.");
+            Assert.AreEqual(filler.Count, stub.Count, "Expected _Count to be same as number of unique inserts, even after GC.");
 
             stub.Clear();
 
-            Assert.AreEqual(0, stub.Count, "Expected Count to be 0 after clear, even after GC.");
+            Assert.AreEqual(0, stub.Count, "Expected _Count to be 0 after clear, even after GC.");
         }
 
     }

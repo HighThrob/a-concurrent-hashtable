@@ -138,7 +138,7 @@ namespace TvdP.Collections
         /// Locking doesn't guarantee that the contents don't change, but prevents operations that would
         /// disrupt the enumeration process.
         /// Operations that use this lock:
-        /// Count, Clear, DisposeGarbage and DoTableMaintenance.
+        /// _Count, Clear, DisposeGarbage and DoTableMaintenance.
         /// Keeping this lock will prevent the table from re-segmenting.
         /// </remarks>
         protected object SyncRoot { get { return _SyncRoot; } }
@@ -361,7 +361,7 @@ namespace TvdP.Collections
 
                     //Don't need to lock a segment to get the count.
                     for (int i = 0, end = _CurrentRange.Count; i != end; ++i)
-                        count += _CurrentRange.GetSegmentByIndex(i).Count;
+                        count += _CurrentRange.GetSegmentByIndex(i)._Count;
 
                     return count;
                 }
