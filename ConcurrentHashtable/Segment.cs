@@ -169,7 +169,7 @@ namespace TvdP.Collections
         /// <param name="item">Out reference to store the found item or, if it can not be found, the new inserted item.</param>
         /// <param name="traits">Object that tells this segment how to treat items and keys.</param>
         /// <returns>True if an existing item could be found, otherwise false.</returns>
-        public bool GetOldestItem(ref TStored key, out TStored item, ConcurrentHashtable<TStored, TSearch> traits)
+        public virtual bool GetOldestItem(ref TStored key, out TStored item, ConcurrentHashtable<TStored, TSearch> traits)
         {
             var searchHash = traits.GetHashCode(ref key);
             var mask = (UInt32)(_List.Length - 1);

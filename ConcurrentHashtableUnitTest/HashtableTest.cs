@@ -93,7 +93,7 @@ namespace TvdP.Collections
             { return !item.HasValue; }
 
             internal protected override bool IsGarbage(ref KeyValuePair<int, string>? item)
-            { return false; }
+            { return item.HasValue && item.Value.Value == "garbage"; }
 
             public new bool FindItem(ref int searchKey, out KeyValuePair<int, string>? item)
             { return base.FindItem(ref searchKey, out item); }
@@ -462,6 +462,21 @@ namespace TvdP.Collections
             }
 
             Assert.AreEqual(0, runningThreads, "Expected all threads to be finished by now.");
+
+            //when he hashtable contains an item that is marked as garbage; it should not get returned by GetOldestItem.
+
+            stub = new HashtableStub();
+
+            KeyValuePair<int, string>? garbageItem = new KeyValuePair<int, string>(10, "garbage"); //specially marked as garbage.
+            KeyValuePair<int, string>? replacedItem2;
+
+            stub.InsertItem(ref garbageItem, out replacedItem2);
+
+            KeyValuePair<int, string>? newItem2 = new KeyValuePair<int, string>(10, "not garbage");
+
+            Assert.AreEqual(false, stub.GetOldestItem(ref newItem2, out replacedItem2), "Expected not to find a garbage item.");
+            Assert.AreNotEqual(garbageItem, replacedItem2, "Expected returned item not to be a stored garbage item.");
+
         }
 
         [TestMethod]
