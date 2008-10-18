@@ -195,9 +195,7 @@ namespace TvdP.Collections
             var item = new ConcurrentWeakDictionaryStrongValuesItem<TValue>(GetHashCode(key), new WeakReference(key), newValue);
             ConcurrentWeakDictionaryStrongValuesItem<TValue> oldItem;
 
-            base.GetOldestItem(ref item, out oldItem);
-
-            return oldItem._Value;
+            return base.GetOldestItem(ref item, out oldItem) ? oldItem._Value : newValue ;
         }
 
         /// <summary>

@@ -192,7 +192,8 @@ namespace TvdP.Collections
 
             do
             {
-                base.GetOldestItem(ref item, out oldItem);
+                if (!base.GetOldestItem(ref item, out oldItem))
+                    return newValue;
 
                 res = (TValue)oldItem._Value.Target;
             }

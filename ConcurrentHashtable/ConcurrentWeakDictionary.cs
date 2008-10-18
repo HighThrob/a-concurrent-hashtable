@@ -198,7 +198,8 @@ namespace TvdP.Collections
 
             do
             {
-                base.GetOldestItem(ref item, out oldItem);
+                if (!base.GetOldestItem(ref item, out oldItem))
+                    return newValue;
 
                 if (oldItem._Value == null)
                     return null;
