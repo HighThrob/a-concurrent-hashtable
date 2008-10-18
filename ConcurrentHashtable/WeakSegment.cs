@@ -27,29 +27,6 @@ namespace TvdP.Collections
         }
 
         /// <summary>
-        /// Override; shouldn't return garbage items.
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="item"></param>
-        /// <param name="traits"></param>
-        /// <returns></returns>
-        public override bool GetOldestItem(ref TStored key, out TStored item, ConcurrentHashtable<TStored, TSearch> traits)
-        {
-            var res = base.GetOldestItem(ref key, out item, traits);
-
-            if(res && ((ConcurrentWeakHashtable<TStored, TSearch>)traits).IsGarbage(ref item))
-            {
-                //found old item that turned out to be garbage.. replace it.
-                TStored garbage;
-                InsertItem(ref key, out garbage, traits);
-                item = key;
-                res = false;
-            }
-
-            return res;
-        }
-
-        /// <summary>
         /// Remove all items in the segment that are Garbage.
         /// </summary>
         /// <param name="traits">The <see cref="ConcurrentHashtable{TStored,TSearch}"/> that determines how to treat each individual item.</param>

@@ -152,7 +152,7 @@ namespace TvdP.Collections
         /// </summary>
         /// <param name="hash"></param>
         /// <returns></returns>
-        Segment<TStored, TSearch> GetSegment(UInt32 hash)
+        internal Segment<TStored, TSearch> GetSegment(UInt32 hash)
         { return ((UInt32)hash < (UInt32)_SwitchPoint ? _NewRange : _CurrentRange).GetSegment(hash); }
 
         /// <summary>
@@ -161,7 +161,7 @@ namespace TvdP.Collections
         /// </summary>
         /// <param name="hash"></param>
         /// <returns></returns>
-        Segment<TStored, TSearch> GetLockedSegment(UInt32 hash)
+        internal Segment<TStored, TSearch> GetLockedSegment(UInt32 hash)
         {
             //If we can't get the lock directly re-aquire the segment.
             while (true)
@@ -200,7 +200,7 @@ namespace TvdP.Collections
         /// <param name="searchKey">A copy to search an already existing instance with</param>
         /// <param name="item">Out reference to receive the found item or the alternative copy</param>
         /// <returns>A boolean that will be true if an existing copy was found and false otherwise.</returns>
-        protected bool GetOldestItem(ref TStored searchKey, out TStored item)
+        protected virtual bool GetOldestItem(ref TStored searchKey, out TStored item)
         {
             var segment = GetLockedSegment(this.GetHashCode(ref searchKey));
 
