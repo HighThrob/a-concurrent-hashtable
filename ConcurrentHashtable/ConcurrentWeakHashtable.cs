@@ -65,5 +65,34 @@ namespace TvdP.Collections
         /// <returns></returns>
         internal override Segmentrange<TStored, TSearch> CreateSegmentRange(int segmentCount, int initialSegmentSize)
         { return WeakSegmentrange<TStored, TSearch>.Create(segmentCount, initialSegmentSize); }
+
+        /// <summary>
+        /// override, GetOldestItem should not return garbage items
+        /// </summary>
+        /// <param name="searchKey"></param>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        protected sealed override bool GetOldestItem(ref TStored searchKey, out TStored item)
+        {
+            var segment = GetLockedSegment(this.GetHashCode(ref searchKey));
+
+            try
+            {
+                var res = segment.GetOldestItem(ref searchKey, out item, this);
+
+                if (res && IsGarbage(ref item))
+                {
+                    //found old item that turned out to be garbage.. replace it.
+                    TStored garbage;
+                    segment.InsertItem(ref searchKey, out garbage, this);
+                    item = searchKey;
+                    res = false;
+                }
+
+                return res;            
+            }
+            finally
+            { segment.Unlock(); }
+        }
     }
 }
