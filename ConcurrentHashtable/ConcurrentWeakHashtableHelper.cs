@@ -24,49 +24,39 @@ namespace TvdP.Collections
         #region Garbage Collection tracking
 
         /// <summary>
-        /// Small class just to detect garbage collections. When an instance of this class
-        /// is garbage collected it will notify WeakHashtableHelper.
-        /// </summary>
-        class GCSpy
-        {
-            ~GCSpy()
-            { ConcurrentWeakHashtableHelper.VerifyGCDetected(null); }
-        }
-
-        /// <summary>
         /// true if a table maintenance session is scheduled or ongoing.
         /// </summary>
         static bool _TableMaintenanceIsPending;
 
         /// <summary>
-        /// WeakReference to a GCSpy object. If its Target property == null
-        /// then the GCSpy object has been garbage collected.
+        /// Small timer that will
+        /// check every 1/10 second if second level GC count increased. 
         /// </summary>
-        static WeakReference _GCSpyReference = new WeakReference(new GCSpy());
+        static Timer _Timer = new Timer(CheckGCCount, null, 100, 100);
 
-        /// <summary>
-        /// Because it is not guaranteed that the finalizer of GCSpy will be called
-        /// check every second if _GCSpyReference.Target == null. 
-        /// </summary>
-        static Timer _Timer = new Timer(VerifyGCDetected, null, 1000, 1000);
+        static int _Level2GCCount;
 
         /// <summary>
         /// Checks if a garbage collection has indeed taken place and schedules
         /// a table maintenance session.
         /// </summary>
         /// <param name="dummy"></param>
-        static internal void VerifyGCDetected(object dummy)
+        static internal void CheckGCCount(object dummy)
         {
-            lock (_GCSpyReference)
-            {
-                if (!_TableMaintenanceIsPending && _GCSpyReference.Target == null)
+            if (Monitor.TryEnter(_TableList,50))
+                try
                 {
-                    _TableMaintenanceIsPending = true;
-                    System.Threading.ThreadPool.QueueUserWorkItem(
-                        new System.Threading.WaitCallback(MaintainTables)
-                    );
+                    if (!_TableMaintenanceIsPending && _Level2GCCount != GC.CollectionCount(2))
+                    {
+                        _TableMaintenanceIsPending = true;
+                        _Level2GCCount = GC.CollectionCount(2);
+                        MaintainTables();
+                    }
                 }
-            }
+                finally 
+                {
+                    Monitor.Exit(_TableList);
+                }
         }
 
         #endregion
@@ -96,13 +86,7 @@ namespace TvdP.Collections
             {
                 //when last table is processed. ready for next session.
                 if (Interlocked.Decrement(ref _NumberOfTablesStillToBeMaintained) == 0)
-                    lock (_GCSpyReference)
-                    {
-                        _TableMaintenanceIsPending = false;
-
-                        if (_GCSpyReference.Target == null)
-                            _GCSpyReference.Target = new GCSpy();
-                    }
+                    _TableMaintenanceIsPending = false;
             }
         }
 
@@ -112,29 +96,26 @@ namespace TvdP.Collections
         /// a GC run has been detected.
         /// </summary>
         /// <param name="nothing"></param>
-        private static void MaintainTables(object nothing)
+        private static void MaintainTables()
         {                       
-            lock (_TableList)
+            int ctr = 0;
+
+            //trim list. remove all GC'd lists
+            for (int i = 0; i < _TableList.Count; ++i)
             {
-                int ctr = 0;
+                var wr = _TableList[i];
 
-                //trim list. remove all GC'd lists
-                for (int i = 0; i < _TableList.Count; ++i)
-                {
-                    var wr = _TableList[i];
-
-                    if (wr.Target != null)
-                        _TableList[ctr++] = wr;
-                }
-
-                _TableList.RemoveRange(ctr, _TableList.Count - ctr);
-
-                //check live tables on alternative threads. Schedule jobs.
-                _NumberOfTablesStillToBeMaintained = ctr;
-                
-                for (int i = 0; i < ctr; ++i)
-                    ThreadPool.QueueUserWorkItem( new WaitCallback( MaintainTable ), _TableList[i].Target );
+                if (wr.Target != null)
+                    _TableList[ctr++] = wr;
             }
+
+            _TableList.RemoveRange(ctr, _TableList.Count - ctr);
+
+            //check live tables on alternative threads. Schedule jobs.
+            _NumberOfTablesStillToBeMaintained = ctr;
+            
+            for (int i = 0; i < ctr; ++i)
+                ThreadPool.QueueUserWorkItem( new WaitCallback( MaintainTable ), _TableList[i].Target );
         }
 
         #endregion
