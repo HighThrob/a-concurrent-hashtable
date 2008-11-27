@@ -26,6 +26,24 @@ namespace TvdP.Collections
             return instance;
         }
 
+        protected override void ResizeList(ConcurrentHashtable<TStored, TSearch> traits)
+        {            
+            if (_Count > 0)
+            {
+                var countStore = _Count;
+                _Count = 0;
+
+                try
+                {
+                    DisposeGarbage((ConcurrentWeakHashtable<TStored, TSearch>)traits);
+                }
+                finally
+                { _Count += countStore; }
+
+                base.ResizeList(traits);
+            }
+        }
+
         /// <summary>
         /// Remove all items in the segment that are Garbage.
         /// </summary>

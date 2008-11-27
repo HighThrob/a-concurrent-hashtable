@@ -37,6 +37,12 @@ namespace TvdP.Collections
                     ((WeakSegment<TStored, TSearch>)segment).DisposeGarbage(this);
         }
 
+        protected override void AssessSegmentation()
+        {
+            DoMaintenance();
+            base.AssessSegmentation();
+        }
+
         /// <summary>
         /// Initialize the newly created ConcurrentHashtable. Invoke in final (sealed) constructor
         /// or Create method.
