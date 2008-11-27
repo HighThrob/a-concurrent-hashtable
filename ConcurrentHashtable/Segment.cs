@@ -366,9 +366,10 @@ namespace TvdP.Collections
 
         #region Resizing
 
-        private void ResizeList(ConcurrentHashtable<TStored, TSearch> traits, int oldListLength)
+        protected virtual void ResizeList(ConcurrentHashtable<TStored, TSearch> traits)
         {
             var oldList = _List;
+            var oldListLength = oldList.Length;
 
             var newListLength = 2;
 
@@ -433,7 +434,7 @@ namespace TvdP.Collections
 
             if (oldListLength > 4 && _Count < (oldListLength >> 2))
                 //Shrink
-                ResizeList(traits, oldListLength);
+                ResizeList(traits);
         }
 
         protected void DecrementCount(ConcurrentHashtable<TStored, TSearch> traits)
@@ -445,7 +446,7 @@ namespace TvdP.Collections
 
             if (++_Count >= (oldListLength - (oldListLength >> 2)))
                 //Grow
-                ResizeList(traits, oldListLength);
+                ResizeList(traits);
         }
 
         /// <summary>

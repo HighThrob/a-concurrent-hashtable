@@ -426,6 +426,13 @@ namespace TvdP.Collections
                     ThreadPool.QueueUserWorkItem(AssessSegmentation);
         }
 
+        protected void ScheduleMaintenance()
+        {
+            if (Interlocked.Exchange(ref _AssessSegmentationPending, 1) == 0)
+                ThreadPool.QueueUserWorkItem(AssessSegmentation);
+        }
+
+
         /// <summary>
         /// Checks if segmentation needs to be adjusted and if so performs the adjustment.
         /// </summary>
@@ -434,22 +441,7 @@ namespace TvdP.Collections
         {
             try
             {
-                //in case of a sudden loss of almost all content we
-                //may need to do this muliple times.
-                while (SegmentationAdjustmentNeeded())
-                {
-                    var meanSegmentAllocatedSpace = MeanSegmentAllocatedSpace;
-                   
-                    int allocatedSpace = _AllocatedSpace;
-                    int atleastSegments = allocatedSpace / meanSegmentAllocatedSpace;
-
-                    Int32 segments = MinSegments;
-
-                    while (atleastSegments > segments)
-                        segments <<= 1;
-
-                    SetSegmentation(segments, meanSegmentAllocatedSpace);
-                }
+                AssessSegmentation();
             }
             finally
             {
@@ -457,7 +449,27 @@ namespace TvdP.Collections
                 EffectTotalAllocatedSpace(0);
             }
         }
-              
+
+        protected virtual void AssessSegmentation()
+        {
+            //in case of a sudden loss of almost all content we
+            //may need to do this muliple times.
+            while (SegmentationAdjustmentNeeded())
+            {
+                var meanSegmentAllocatedSpace = MeanSegmentAllocatedSpace;
+
+                int allocatedSpace = _AllocatedSpace;
+                int atleastSegments = allocatedSpace / meanSegmentAllocatedSpace;
+
+                Int32 segments = MinSegments;
+
+                while (atleastSegments > segments)
+                    segments <<= 1;
+
+                SetSegmentation(segments, meanSegmentAllocatedSpace);
+            }
+        }
+
         /// <summary>
         /// Adjusts the segmentation to the new segment count
         /// </summary>
@@ -466,7 +478,27 @@ namespace TvdP.Collections
         void SetSegmentation(Int32 newSegmentCount, Int32 segmentSize)
         {
             lock (SyncRoot)
-            {
+            {                
+		// //<<<<<<<<<<<<<<<<<<<< debug <<<<<<<<<<<<<<<<<<<<<<<<
+                //{
+                //    int minSize = _CurrentRange.GetSegmentByIndex(0)._List.Length;
+                //    int maxSize = minSize;
+
+                //    for (int i = 1, end = _CurrentRange.Count; i < end; ++i)
+                //    {
+                //        int currentSize = _CurrentRange.GetSegmentByIndex(i)._List.Length;
+
+                //        if (currentSize < minSize)
+                //            minSize = currentSize;
+
+                //        if (currentSize > maxSize)
+                //            maxSize = currentSize;
+                //    }
+
+                //    System.Diagnostics.Debug.Assert(maxSize < 6 * minSize, "Probably a bad hash");
+                //}
+                // //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
                 unchecked
                 {
                     //create the new range
