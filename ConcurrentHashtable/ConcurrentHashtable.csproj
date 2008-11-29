@@ -16,6 +16,9 @@
     <SccLocalPath>SAK</SccLocalPath>
     <SccAuxPath>SAK</SccAuxPath>
     <SccProvider>SAK</SccProvider>
+    <SignAssembly>false</SignAssembly>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -52,7 +55,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Maintainable.cs" />
+    <Compile Include="IMaintainable.cs" />
     <Compile Include="ConcurrentWeakDictionaryStrongKeys.cs" />
     <Compile Include="ConcurrentWeakDictionaryStrongValues.cs" />
     <Compile Include="ConcurrentDictionary.cs" />
