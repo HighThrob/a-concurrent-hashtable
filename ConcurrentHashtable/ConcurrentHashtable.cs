@@ -478,8 +478,9 @@ namespace TvdP.Collections
         void SetSegmentation(Int32 newSegmentCount, Int32 segmentSize)
         {
             lock (SyncRoot)
-            {                
-		// //<<<<<<<<<<<<<<<<<<<< debug <<<<<<<<<<<<<<<<<<<<<<<<
+            {
+#if DEBUG
+                //<<<<<<<<<<<<<<<<<<<< debug <<<<<<<<<<<<<<<<<<<<<<<<
                 //{
                 //    int minSize = _CurrentRange.GetSegmentByIndex(0)._List.Length;
                 //    int maxSize = minSize;
@@ -495,10 +496,10 @@ namespace TvdP.Collections
                 //            maxSize = currentSize;
                 //    }
 
-                //    System.Diagnostics.Debug.Assert(maxSize < 6 * minSize, "Probably a bad hash");
+                //    System.Diagnostics.Debug.Assert(maxSize <= 8 * minSize, "Probably a bad hash");
                 //}
-                // //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
+                //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+#endif
                 unchecked
                 {
                     //create the new range
