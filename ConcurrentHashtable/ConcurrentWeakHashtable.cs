@@ -80,7 +80,7 @@ namespace TvdP.Collections
         /// <returns></returns>
         protected sealed override bool GetOldestItem(ref TStored searchKey, out TStored item)
         {
-            var segment = GetLockedSegment(this.GetHashCode(ref searchKey));
+            var segment = GetLockedSegment(this.GetItemHashCode(ref searchKey));
 
             try
             {

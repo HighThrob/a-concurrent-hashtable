@@ -26,7 +26,7 @@ namespace TvdP.Collections
 
             for (int i = 0; i < 1000; ++i)
             {
-                //var h = Hasher.Rehash(EqualityComparer<int>.Default.GetHashCode(Hasher.Rehash(i)));
+                //var h = Hasher.Rehash(EqualityComparer<int>.Default.GetItemHashCode(Hasher.Rehash(i)));
                 var h = Hasher.Rehash(i);
 
                 unchecked
@@ -47,7 +47,7 @@ namespace TvdP.Collections
 
             for (int i = 1000; i < 2000; ++i)
             {
-                //var h = Hasher.Rehash(EqualityComparer<int>.Default.GetHashCode(Hasher.Rehash(i)));
+                //var h = Hasher.Rehash(EqualityComparer<int>.Default.GetItemHashCode(Hasher.Rehash(i)));
                 var h = Hasher.Rehash(i);
 
                 unchecked
@@ -71,22 +71,22 @@ namespace TvdP.Collections
 
             readonly IEqualityComparer<int> _Comparer;
 
-            internal protected override UInt32 GetHashCode(ref KeyValuePair<int, string>? item)
+            internal protected override UInt32 GetItemHashCode(ref KeyValuePair<int, string>? item)
             {
                 return item.HasValue ? Hasher.Rehash(_Comparer.GetHashCode(item.Value.Key)) : 0;
                 //return item.HasValue ? item.Value.Key : 0;
             }
 
-            internal protected override UInt32 GetHashCode(ref int key)
+            internal protected override UInt32 GetKeyHashCode(ref int key)
             {
                 return Hasher.Rehash(_Comparer.GetHashCode(key));
                 //return key;
             }
 
-            internal protected override bool Equals(ref KeyValuePair<int, string>? item, ref int key)
+            internal protected override bool ItemEqualsKey(ref KeyValuePair<int, string>? item, ref int key)
             { return item.HasValue && _Comparer.Equals(item.Value.Key, key); }
 
-            internal protected override bool Equals(ref KeyValuePair<int, string>? item1, ref KeyValuePair<int, string>? item2)
+            internal protected override bool ItemEqualsItem(ref KeyValuePair<int, string>? item1, ref KeyValuePair<int, string>? item2)
             { return item1.HasValue && item2.HasValue && _Comparer.Equals(item1.Value.Key, item2.Value.Key); }
 
             internal protected override bool IsEmpty(ref KeyValuePair<int, string>? item)
