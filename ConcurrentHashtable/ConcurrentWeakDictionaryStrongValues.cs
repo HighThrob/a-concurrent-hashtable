@@ -91,11 +91,11 @@ namespace TvdP.Collections
         /// <param name="item">Reference to the item to get a hash value for.</param>
         /// <returns>The hash value as an <see cref="UInt32"/>.</returns>
         /// <remarks>
-        /// The hash returned should be properly randomized hash. The standard GetHashCode methods are usually not good enough.
+        /// The hash returned should be properly randomized hash. The standard GetItemHashCode methods are usually not good enough.
         /// A storeable item and a matching search key should return the same hash code.
-        /// So the statement <code>Equals(storeableItem, searchKey) ? GetHashCode(storeableItem) == GetHashCode(searchKey) : true </code> should always be true;
+        /// So the statement <code>ItemEqualsItem(storeableItem, searchKey) ? GetItemHashCode(storeableItem) == GetItemHashCode(searchKey) : true </code> should always be true;
         /// </remarks>
-        internal protected override UInt32 GetHashCode(ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item)
+        internal protected override UInt32 GetItemHashCode(ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item)
         { return item._Hash; }
 
         /// <summary>
@@ -104,11 +104,11 @@ namespace TvdP.Collections
         /// <param name="key">Reference to the key to get a hash value for.</param>
         /// <returns>The hash value as an <see cref="UInt32"/>.</returns>
         /// <remarks>
-        /// The hash returned should be properly randomized hash. The standard GetHashCode methods are usually not good enough.
+        /// The hash returned should be properly randomized hash. The standard GetItemHashCode methods are usually not good enough.
         /// A storeable item and a matching search key should return the same hash code.
-        /// So the statement <code>Equals(storeableItem, searchKey) ? GetHashCode(storeableItem) == GetHashCode(searchKey) : true </code> should always be true;
+        /// So the statement <code>ItemEqualsItem(storeableItem, searchKey) ? GetItemHashCode(storeableItem) == GetItemHashCode(searchKey) : true </code> should always be true;
         /// </remarks>
-        internal protected override UInt32 GetHashCode(ref ConcurrentWeakDictionaryStrongValuesKey<TKey> key)
+        internal protected override UInt32 GetKeyHashCode(ref ConcurrentWeakDictionaryStrongValuesKey<TKey> key)
         { return key._Hash; }
 
         /// <summary>
@@ -117,7 +117,7 @@ namespace TvdP.Collections
         /// <param name="item">Reference to the storeable item to compare.</param>
         /// <param name="key">Reference to the search key to compare.</param>
         /// <returns>True if the storeable item and search key match; false otherwise.</returns>
-        internal protected override bool Equals(ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item, ref ConcurrentWeakDictionaryStrongValuesKey<TKey> key)
+        internal protected override bool ItemEqualsKey(ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item, ref ConcurrentWeakDictionaryStrongValuesKey<TKey> key)
         {
             var key1 = (TKey)item._Key.Target;
             return _Comparer.Equals(key1, key._Key);
@@ -129,7 +129,7 @@ namespace TvdP.Collections
         /// <param name="item1">Reference to the first storeable item to compare.</param>
         /// <param name="item2">Reference to the second storeable item to compare.</param>
         /// <returns>True if the two soreable items should be regarded as equal.</returns>
-        internal protected override bool Equals(ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item1, ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item2)
+        internal protected override bool ItemEqualsItem(ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item1, ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item2)
         {
             var key1 = (TKey)item1._Key.Target;
             var key2 = (TKey)item2._Key.Target;

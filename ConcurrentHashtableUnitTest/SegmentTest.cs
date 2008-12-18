@@ -79,22 +79,22 @@ namespace TvdP.Collections
 
             #region ISegmentTraits<long?,int> Members
 
-            internal protected override UInt32 GetHashCode(ref long? storedItem)
+            internal protected override UInt32 GetItemHashCode(ref long? storedItem)
             {
                 return (UInt32)storedItem.GetHashCode();
             }
 
-            internal protected override UInt32 GetHashCode(ref int searchKey)
+            internal protected override UInt32 GetKeyHashCode(ref int searchKey)
             {
                 return (UInt32)((long?)searchKey).GetHashCode();
             }
 
-            internal protected override bool Equals(ref long? storedItem, ref int searchKey)
+            internal protected override bool ItemEqualsKey(ref long? storedItem, ref int searchKey)
             {
                 return storedItem == (long?)searchKey;
             }
 
-            internal protected override bool Equals(ref long? storedItem1, ref long? storedItem2)
+            internal protected override bool ItemEqualsItem(ref long? storedItem1, ref long? storedItem2)
             {
                 return storedItem1 == storedItem2;
             }

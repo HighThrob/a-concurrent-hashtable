@@ -130,19 +130,19 @@ namespace TvdP.Collections
         /// <returns>True if an item could be found, otherwise false.</returns>
         public bool FindItem(ref TSearch key, out TStored item, ConcurrentHashtable<TStored, TSearch> traits)
         {
-            var searchHash = traits.GetHashCode(ref key);
+            var searchHash = traits.GetKeyHashCode(ref key);
             var mask = (UInt32)(_List.Length - 1);
             var i = searchHash & mask;
 
             if (!traits.IsEmpty(ref _List[i]))
             {
-                var firstHash = traits.GetHashCode(ref _List[i]);
+                var firstHash = traits.GetItemHashCode(ref _List[i]);
                 var storedItemHash = firstHash;
                 var searchHashDiff = (searchHash - firstHash) & mask;
 
                 do
                 {
-                    if (storedItemHash == searchHash && traits.Equals(ref _List[i], ref key))
+                    if (storedItemHash == searchHash && traits.ItemEqualsKey(ref _List[i], ref key))
                     {
                         item = _List[i];
                         return true;
@@ -153,7 +153,7 @@ namespace TvdP.Collections
                     if(traits.IsEmpty(ref _List[i]))
                         break;
 
-                    storedItemHash = traits.GetHashCode(ref _List[i]);
+                    storedItemHash = traits.GetItemHashCode(ref _List[i]);
                 }
                 while (((storedItemHash - firstHash) & mask) <= searchHashDiff);
             }
@@ -171,19 +171,19 @@ namespace TvdP.Collections
         /// <returns>True if an existing item could be found, otherwise false.</returns>
         public bool GetOldestItem(ref TStored key, out TStored item, ConcurrentHashtable<TStored, TSearch> traits)
         {
-            var searchHash = traits.GetHashCode(ref key);
+            var searchHash = traits.GetItemHashCode(ref key);
             var mask = (UInt32)(_List.Length - 1);
             var i = searchHash & mask;
 
             if (!traits.IsEmpty(ref _List[i]))
             {
-                var firstHash = traits.GetHashCode(ref _List[i]);
+                var firstHash = traits.GetItemHashCode(ref _List[i]);
                 var storedItemHash = firstHash;
                 var searchHashDiff = (searchHash - firstHash) & mask;
 
                 while (true)
                 {
-                    if (storedItemHash == searchHash && traits.Equals(ref _List[i], ref key))
+                    if (storedItemHash == searchHash && traits.ItemEqualsItem(ref _List[i], ref key))
                     {
                         item = _List[i];
                         return true;
@@ -194,7 +194,7 @@ namespace TvdP.Collections
                     if (traits.IsEmpty(ref _List[i]))
                         break;
 
-                    storedItemHash = traits.GetHashCode(ref _List[i]);
+                    storedItemHash = traits.GetItemHashCode(ref _List[i]);
 
                     if (((storedItemHash - firstHash) & mask) > searchHashDiff)
                     {
@@ -221,19 +221,19 @@ namespace TvdP.Collections
         /// <returns>True if an existing item could be found and is replaced, otherwise false.</returns>
         public bool InsertItem(ref TStored key, out TStored item, ConcurrentHashtable<TStored, TSearch> traits)
         {
-            var searchHash = traits.GetHashCode(ref key);
+            var searchHash = traits.GetItemHashCode(ref key);
             var mask = (UInt32)(_List.Length - 1);
             var i = searchHash & mask;
 
             if (!traits.IsEmpty(ref _List[i]))
             {
-                var firstHash = traits.GetHashCode(ref _List[i]);
+                var firstHash = traits.GetItemHashCode(ref _List[i]);
                 var storedItemHash = firstHash;
                 var searchHashDiff = (searchHash - firstHash) & mask;
 
                 while (true)
                 {
-                    if (storedItemHash == searchHash && traits.Equals(ref _List[i], ref key))
+                    if (storedItemHash == searchHash && traits.ItemEqualsItem(ref _List[i], ref key))
                     {
                         item = _List[i];
                         _List[i] = key;
@@ -245,7 +245,7 @@ namespace TvdP.Collections
                     if (traits.IsEmpty(ref _List[i]))
                         break;
 
-                    storedItemHash = traits.GetHashCode(ref _List[i]);
+                    storedItemHash = traits.GetItemHashCode(ref _List[i]);
 
                     if (((storedItemHash - firstHash) & mask) > searchHashDiff)
                     {
@@ -272,19 +272,19 @@ namespace TvdP.Collections
         /// <returns>True if an item could be found and is removed, false otherwise.</returns>
         public bool RemoveItem(ref TSearch key, out TStored item, ConcurrentHashtable<TStored, TSearch> traits)
         {
-            var searchHash = traits.GetHashCode(ref key);
+            var searchHash = traits.GetKeyHashCode(ref key);
             var mask = (UInt32)(_List.Length - 1);
             var i = searchHash & mask;
 
             if (!traits.IsEmpty(ref _List[i]))
             {
-                var firstHash = traits.GetHashCode(ref _List[i]);
+                var firstHash = traits.GetItemHashCode(ref _List[i]);
                 var storedItemHash = firstHash;
                 var searchHashDiff = (searchHash - firstHash) & mask;
 
                 do
                 {
-                    if (storedItemHash == searchHash && traits.Equals(ref _List[i], ref key))
+                    if (storedItemHash == searchHash && traits.ItemEqualsKey(ref _List[i], ref key))
                     {
                         item = _List[i];
                         RemoveAtIndex(i, traits);
@@ -297,7 +297,7 @@ namespace TvdP.Collections
                     if (traits.IsEmpty(ref _List[i]))
                         break;
 
-                    storedItemHash = traits.GetHashCode(ref _List[i]);
+                    storedItemHash = traits.GetItemHashCode(ref _List[i]);
                 }
                 while (((storedItemHash - firstHash) & mask) <= searchHashDiff);
             }
@@ -314,7 +314,7 @@ namespace TvdP.Collections
 
             while(true)
             {
-                if (traits.IsEmpty(ref _List[j]) || (traits.GetHashCode(ref _List[j]) & mask) == j)
+                if (traits.IsEmpty(ref _List[j]) || (traits.GetItemHashCode(ref _List[j]) & mask) == j)
                 {
                     _List[i] = default(TStored);                    
                     break;
@@ -385,7 +385,7 @@ namespace TvdP.Collections
             for (int i = 0; i != oldListLength; ++i)
                 if (!traits.IsEmpty(ref oldList[i]))
                 {                    
-                    var searchHash = traits.GetHashCode(ref oldList[i]);
+                    var searchHash = traits.GetItemHashCode(ref oldList[i]);
 
                     //j is prefered insertion pos in new list.
                     var j = searchHash & mask;
@@ -394,7 +394,7 @@ namespace TvdP.Collections
                         _List[j] = oldList[i];
                     else
                     {
-                        var firstHash = traits.GetHashCode(ref _List[j]);
+                        var firstHash = traits.GetItemHashCode(ref _List[j]);
                         var storedItemHash = firstHash;
                         var searchHashDiff = (searchHash - firstHash) & mask;
 
@@ -408,7 +408,7 @@ namespace TvdP.Collections
                                 break;
                             }
 
-                            storedItemHash = traits.GetHashCode(ref _List[j]);
+                            storedItemHash = traits.GetItemHashCode(ref _List[j]);
 
                             if (((storedItemHash - firstHash) & mask) > searchHashDiff)
                             {

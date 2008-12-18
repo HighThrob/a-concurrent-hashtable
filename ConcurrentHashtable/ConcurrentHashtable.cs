@@ -82,11 +82,11 @@ namespace TvdP.Collections
         /// <param name="item">Reference to the item to get a hash value for.</param>
         /// <returns>The hash value as an <see cref="UInt32"/>.</returns>
         /// <remarks>
-        /// The hash returned should be properly randomized hash. The standard GetHashCode methods are usually not good enough.
+        /// The hash returned should be properly randomized hash. The standard GetItemHashCode methods are usually not good enough.
         /// A storeable item and a matching search key should return the same hash code.
-        /// So the statement <code>Equals(storeableItem, searchKey) ? GetHashCode(storeableItem) == GetHashCode(searchKey) : true </code> should always be true;
+        /// So the statement <code>ItemEqualsItem(storeableItem, searchKey) ? GetItemHashCode(storeableItem) == GetItemHashCode(searchKey) : true </code> should always be true;
         /// </remarks>
-        internal protected abstract UInt32 GetHashCode(ref TStored item);
+        internal protected abstract UInt32 GetItemHashCode(ref TStored item);
 
         /// <summary>
         /// Get a hashcode for given search key.
@@ -94,11 +94,11 @@ namespace TvdP.Collections
         /// <param name="key">Reference to the key to get a hash value for.</param>
         /// <returns>The hash value as an <see cref="UInt32"/>.</returns>
         /// <remarks>
-        /// The hash returned should be properly randomized hash. The standard GetHashCode methods are usually not good enough.
+        /// The hash returned should be properly randomized hash. The standard GetItemHashCode methods are usually not good enough.
         /// A storeable item and a matching search key should return the same hash code.
-        /// So the statement <code>Equals(storeableItem, searchKey) ? GetHashCode(storeableItem) == GetHashCode(searchKey) : true </code> should always be true;
+        /// So the statement <code>ItemEqualsItem(storeableItem, searchKey) ? GetItemHashCode(storeableItem) == GetItemHashCode(searchKey) : true </code> should always be true;
         /// </remarks>
-        internal protected abstract UInt32 GetHashCode(ref TSearch key);
+        internal protected abstract UInt32 GetKeyHashCode(ref TSearch key);
 
         /// <summary>
         /// Compares a storeable item to a search key. Should return true if they match.
@@ -106,7 +106,7 @@ namespace TvdP.Collections
         /// <param name="item">Reference to the storeable item to compare.</param>
         /// <param name="key">Reference to the search key to compare.</param>
         /// <returns>True if the storeable item and search key match; false otherwise.</returns>
-        internal protected abstract bool Equals(ref TStored item, ref TSearch key);
+        internal protected abstract bool ItemEqualsKey(ref TStored item, ref TSearch key);
 
         /// <summary>
         /// Compares two storeable items for equality.
@@ -114,7 +114,7 @@ namespace TvdP.Collections
         /// <param name="item1">Reference to the first storeable item to compare.</param>
         /// <param name="item2">Reference to the second storeable item to compare.</param>
         /// <returns>True if the two soreable items should be regarded as equal.</returns>
-        internal protected abstract bool Equals(ref TStored item1, ref TStored item2);
+        internal protected abstract bool ItemEqualsItem(ref TStored item1, ref TStored item2);
 
         /// <summary>
         /// Indicates if a specific item reference contains a valid item.
@@ -183,7 +183,7 @@ namespace TvdP.Collections
         /// <returns>A boolean that will be true if an item has been found and false otherwise.</returns>
         protected bool FindItem(ref TSearch searchKey, out TStored item)
         {
-            var segment = GetLockedSegment(this.GetHashCode(ref searchKey));
+            var segment = GetLockedSegment(this.GetKeyHashCode(ref searchKey));
 
             try
             {
@@ -202,7 +202,7 @@ namespace TvdP.Collections
         /// <returns>A boolean that will be true if an existing copy was found and false otherwise.</returns>
         protected virtual bool GetOldestItem(ref TStored searchKey, out TStored item)
         {
-            var segment = GetLockedSegment(this.GetHashCode(ref searchKey));
+            var segment = GetLockedSegment(this.GetItemHashCode(ref searchKey));
 
             try
             {
@@ -220,7 +220,7 @@ namespace TvdP.Collections
         /// <returns>A boolean that will be true if an existing copy was found and replaced and false otherwise.</returns>
         protected bool InsertItem(ref TStored searchKey, out TStored replacedItem)
         {
-            var segment = GetLockedSegment(this.GetHashCode(ref searchKey));
+            var segment = GetLockedSegment(this.GetItemHashCode(ref searchKey));
 
             try
             {
@@ -238,7 +238,7 @@ namespace TvdP.Collections
         /// <returns>A boolean that will be rue if an item was found and removed and false otherwise.</returns>
         protected bool RemoveItem(ref TSearch searchKey, out TStored removedItem)
         {
-            var segment = GetLockedSegment(this.GetHashCode(ref searchKey));
+            var segment = GetLockedSegment(this.GetKeyHashCode(ref searchKey));
 
             try
             {
@@ -546,7 +546,7 @@ namespace TvdP.Collections
 
                         while ((it = currentSegment.GetNextItem(it, out currentKey, this)) >= 0)
                         {
-                            var currentKeyHash = this.GetHashCode(ref currentKey);
+                            var currentKeyHash = this.GetItemHashCode(ref currentKey);
 
                             //get the new segment. this is already locked.
                             var newSegment = _NewRange.GetSegment(currentKeyHash);
