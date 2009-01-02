@@ -378,48 +378,51 @@ namespace TvdP.Collections
 
             newListLength <<= 1;
 
-            _List = new TStored[newListLength];
+            if (newListLength != oldListLength)
+            {
+                _List = new TStored[newListLength];
 
-            var mask = (UInt32)(newListLength - 1);
+                var mask = (UInt32)(newListLength - 1);
 
-            for (int i = 0; i != oldListLength; ++i)
-                if (!traits.IsEmpty(ref oldList[i]))
-                {                    
-                    var searchHash = traits.GetItemHashCode(ref oldList[i]);
-
-                    //j is prefered insertion pos in new list.
-                    var j = searchHash & mask;
-
-                    if (traits.IsEmpty(ref _List[j]))
-                        _List[j] = oldList[i];
-                    else
+                for (int i = 0; i != oldListLength; ++i)
+                    if (!traits.IsEmpty(ref oldList[i]))
                     {
-                        var firstHash = traits.GetItemHashCode(ref _List[j]);
-                        var storedItemHash = firstHash;
-                        var searchHashDiff = (searchHash - firstHash) & mask;
+                        var searchHash = traits.GetItemHashCode(ref oldList[i]);
 
-                        while (true)
+                        //j is prefered insertion pos in new list.
+                        var j = searchHash & mask;
+
+                        if (traits.IsEmpty(ref _List[j]))
+                            _List[j] = oldList[i];
+                        else
                         {
-                            j = (j + 1) & mask;
+                            var firstHash = traits.GetItemHashCode(ref _List[j]);
+                            var storedItemHash = firstHash;
+                            var searchHashDiff = (searchHash - firstHash) & mask;
 
-                            if (traits.IsEmpty(ref _List[j]))
+                            while (true)
                             {
-                                _List[j] = oldList[i];
-                                break;
-                            }
+                                j = (j + 1) & mask;
 
-                            storedItemHash = traits.GetItemHashCode(ref _List[j]);
+                                if (traits.IsEmpty(ref _List[j]))
+                                {
+                                    _List[j] = oldList[i];
+                                    break;
+                                }
 
-                            if (((storedItemHash - firstHash) & mask) > searchHashDiff)
-                            {
-                                InsertItemAtIndex(mask, j, oldList[i], traits);
-                                break;
+                                storedItemHash = traits.GetItemHashCode(ref _List[j]);
+
+                                if (((storedItemHash - firstHash) & mask) > searchHashDiff)
+                                {
+                                    InsertItemAtIndex(mask, j, oldList[i], traits);
+                                    break;
+                                }
                             }
                         }
                     }
-                }                   
 
-            traits.EffectTotalAllocatedSpace(newListLength - oldListLength);
+                traits.EffectTotalAllocatedSpace(newListLength - oldListLength);
+            }
         }
 
         /// <summary>

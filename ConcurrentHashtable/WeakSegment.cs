@@ -27,7 +27,7 @@ namespace TvdP.Collections
         }
 
         protected override void ResizeList(ConcurrentHashtable<TStored, TSearch> traits)
-        {            
+        {
             if (_Count > 0)
             {
                 var countStore = _Count;
