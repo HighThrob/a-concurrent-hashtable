@@ -24,6 +24,26 @@ namespace TvdP.Collections
         #region Garbage Collection tracking
 
         /// <summary>
+        /// Check all table registrations for continued existence. Removes the entries for
+        /// tables that have been GC'd
+        /// </summary>
+        private static void RemoveVoidTables()
+        {
+            int ctr = 0;
+
+            //trim list. remove all GC'd lists
+            for (int i = 0; i < _TableList.Count; ++i)
+            {
+                var wr = _TableList[i];
+
+                if (wr.Target != null)
+                    _TableList[ctr++] = wr;
+            }
+
+            _TableList.RemoveRange(ctr, _TableList.Count - ctr);
+        }
+
+        /// <summary>
         /// true if a table maintenance session is scheduled or ongoing.
         /// </summary>
         static bool _TableMaintenanceIsPending;
@@ -43,6 +63,8 @@ namespace TvdP.Collections
         /// <param name="dummy"></param>
         static internal void CheckGCCount(object dummy)
         {
+            WeakReference[] res = null;
+
             if (Monitor.TryEnter(_TableList,50))
                 try
                 {
@@ -50,75 +72,77 @@ namespace TvdP.Collections
                     {
                         _TableMaintenanceIsPending = true;
                         _Level2GCCount = GC.CollectionCount(2);
-                        MaintainTables();
+
+                        RemoveVoidTables();
+
+                        res = _TableList.ToArray();
                     }
                 }
                 finally 
                 {
                     Monitor.Exit(_TableList);
                 }
-        }
-
-        #endregion
-
-        #region Maintaining Tables
-
-        /// <summary>
-        /// The number of tables of which the DoMaintenance method still needs to be called
-        /// in this maintenance session.
-        /// </summary>
-        static int _NumberOfTablesStillToBeMaintained;
-
-        /// <summary>
-        /// Maintain a single table. This is a WaitCallback method that will be scheduled in the thread pool.
-        /// </summary>
-        /// <param name="tableAsObject"></param>
-        private static void MaintainTable(object tableAsObject)
-        {
-            var table = (IMaintainable)tableAsObject;
-
-            try
-            {
-                if( table != null )
-                    table.DoMaintenance();
-            }
-            finally
-            {
-                //when last table is processed. ready for next session.
-                if (Interlocked.Decrement(ref _NumberOfTablesStillToBeMaintained) == 0)
-                    _TableMaintenanceIsPending = false;
-            }
-        }
-
-        /// <summary>
-        /// Check all table registrations for continued existence. Then schedule TableMaintenance 
-        /// jobs for each existing table. This method is to be scheduled in the thread pool whenever
-        /// a GC run has been detected.
-        /// </summary>
-        /// <param name="nothing"></param>
-        private static void MaintainTables()
-        {                       
-            int ctr = 0;
-
-            //trim list. remove all GC'd lists
-            for (int i = 0; i < _TableList.Count; ++i)
-            {
-                var wr = _TableList[i];
-
-                if (wr.Target != null)
-                    _TableList[ctr++] = wr;
-            }
-
-            _TableList.RemoveRange(ctr, _TableList.Count - ctr);
-
-            //check live tables on alternative threads. Schedule jobs.
-            _NumberOfTablesStillToBeMaintained = ctr;
             
-            for (int i = 0; i < ctr; ++i)
-                ThreadPool.QueueUserWorkItem( new WaitCallback( MaintainTable ), _TableList[i].Target );
+            if (res != null)
+            {
+                var thread = new System.Threading.Thread(
+                    new ThreadStart(
+                        delegate
+                        {
+                            try
+                            {
+                                Queue<IMaintainable> delayedQueue = null;
+
+                                for (int i = 0, end = res.Length; i < end; ++i)
+                                {
+                                    var target = (IMaintainable)res[i].Target;
+
+                                    if (target != null)
+                                    {
+                                        if (!target.DoMaintenance())
+                                        {
+                                            if (delayedQueue == null)
+                                                delayedQueue = new Queue<IMaintainable>();
+
+                                            delayedQueue.Enqueue(target);
+                                        }
+                                    }
+                                }
+
+                                if (delayedQueue != null)
+                                {
+                                    int sleepCounter = delayedQueue.Count;
+                                    while (delayedQueue.Count > 0)
+                                    {
+                                        if (sleepCounter-- == 0)
+                                        {
+                                            Thread.Sleep(0);
+                                            sleepCounter = delayedQueue.Count;
+                                        }
+
+                                        var target = delayedQueue.Dequeue();
+
+                                        if (!target.DoMaintenance())
+                                            delayedQueue.Enqueue(target);
+                                    }
+                                }
+                            }
+                            finally
+                            {
+                                _TableMaintenanceIsPending = false;
+                            }
+                        }
+                    )
+                );
+
+                thread.Priority = ThreadPriority.Lowest;
+
+                thread.Start();
+            }
         }
 
         #endregion
+
 
         #region maintaining Tables list
 

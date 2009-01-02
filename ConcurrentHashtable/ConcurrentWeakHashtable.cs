@@ -30,11 +30,22 @@ namespace TvdP.Collections
         /// <summary>
         /// Table maintenance, removes all items marked as Garbage.
         /// </summary>
-        public virtual void DoMaintenance()
+        public virtual bool DoMaintenance()
         {
-            lock (SyncRoot)
+            var syncRoot = SyncRoot;
+
+            if (!Monitor.TryEnter(syncRoot))
+                return false;
+
+            try
+            {
                 foreach (var segment in EnumerateAmorphLockedSegments())
                     ((WeakSegment<TStored, TSearch>)segment).DisposeGarbage(this);
+            }
+            finally
+            { Monitor.Exit(syncRoot); }
+
+            return true;
         }
 
         protected override void AssessSegmentation()

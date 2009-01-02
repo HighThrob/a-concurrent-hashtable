@@ -22,6 +22,6 @@ namespace TvdP.Collections
         /// <summary>
         /// Method called by a background worker thread to do maintenance deeded by the object.
         /// </summary>
-        void DoMaintenance();
+        bool DoMaintenance();
     }
 }
