@@ -135,7 +135,7 @@ namespace TvdP.Collections
                     )
                 );
 
-                thread.Priority = ThreadPriority.Lowest;
+                thread.Priority = ThreadPriority.Highest;
 
                 thread.Start();
             }
