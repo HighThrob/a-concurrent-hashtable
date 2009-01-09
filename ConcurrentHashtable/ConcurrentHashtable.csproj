@@ -55,6 +55,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Cache.cs" />
     <Compile Include="IMaintainable.cs" />
     <Compile Include="ConcurrentWeakDictionaryStrongKeys.cs" />
     <Compile Include="ConcurrentWeakDictionaryStrongValues.cs" />
