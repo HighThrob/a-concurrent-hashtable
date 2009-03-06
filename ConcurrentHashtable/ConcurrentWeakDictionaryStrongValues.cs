@@ -11,6 +11,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Runtime.Serialization;
+using System.Security.Permissions;
 
 namespace TvdP.Collections
 {
@@ -53,7 +55,8 @@ namespace TvdP.Collections
     /// </summary>
     /// <typeparam name="TKey">Type of the keys. This must be a reference type.</typeparam>
     /// <typeparam name="TValue">Type of the values.</typeparam>
-    public sealed class ConcurrentWeakDictionaryStrongValues<TKey,TValue> : ConcurrentWeakHashtable<ConcurrentWeakDictionaryStrongValuesItem<TValue>,ConcurrentWeakDictionaryStrongValuesKey<TKey>>
+    [Serializable]
+    public sealed class ConcurrentWeakDictionaryStrongValues<TKey,TValue> : ConcurrentWeakHashtable<ConcurrentWeakDictionaryStrongValuesItem<TValue>,ConcurrentWeakDictionaryStrongValuesKey<TKey>>, ISerializable
         where TKey : class
     {
         #region Constructors
@@ -79,6 +82,20 @@ namespace TvdP.Collections
             _Comparer = comparer;
 
             Initialize();
+        }
+
+        ConcurrentWeakDictionaryStrongValues(SerializationInfo serializationInfo, StreamingContext streamingContext)
+        {
+            _Comparer = (IEqualityComparer<TKey>)serializationInfo.GetValue("Comparer", typeof(IEqualityComparer<TKey>));
+            var items = (List<KeyValuePair<TKey, TValue>>)serializationInfo.GetValue("Items", typeof(List<KeyValuePair<TKey, TValue>>));
+
+            if (_Comparer == null || items == null)
+                throw new SerializationException();
+
+            Initialize();
+
+            foreach (var kvp in items)
+                Insert(kvp.Key, kvp.Value);
         }
 
         #endregion
@@ -157,6 +174,8 @@ namespace TvdP.Collections
         #endregion
 
         IEqualityComparer<TKey> _Comparer;
+
+        public IEqualityComparer<TKey> Comparer { get { return _Comparer; } }
 
         UInt32 GetHashCode(TKey key)
         { return Hasher.Rehash(_Comparer.GetHashCode(key)); }
@@ -324,6 +343,23 @@ namespace TvdP.Collections
         /// that the dictionary will actually be empty when this method returns.</remarks>
         public new void Clear()
         { base.Clear(); }
+
+        #endregion
+
+        #region ISerializable Members
+
+        [SecurityPermission(SecurityAction.Demand,SerializationFormatter=true)]
+        void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue("Comparer", _Comparer);
+            info.AddValue(
+                "Items",
+                (object)Items
+                    .Select(item => new KeyValuePair<TKey, TValue>((TKey)item._Key.Target, item._Value))
+                    .Where(kvp => kvp.Key != null)
+                    .ToList()
+            );
+        }
 
         #endregion
     }

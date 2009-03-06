@@ -563,10 +563,14 @@ namespace TvdP.Collections
                                 KeyValuePair<int, string>? newItem = kvp;
                                 KeyValuePair<int, string>? replacedItem;
 
+                                stub.FindItem(ref key, out replacedItem);
+
                                 if (i % 2 == 0)
                                     stub.InsertItem(ref newItem, out replacedItem);
                                 else
                                     stub.RemoveItem(ref key, out replacedItem);
+
+                                stub.FindItem(ref key, out replacedItem);
 
                                 if (j == i)
                                 {

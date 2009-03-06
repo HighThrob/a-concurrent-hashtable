@@ -14,6 +14,7 @@ using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SCG = System.Collections.Generic;
 using System.Threading;
+using System.IO;
 
 namespace TvdP.Collections
 {
@@ -246,6 +247,29 @@ namespace TvdP.Collections
             }
 
             Assert.AreEqual(2, c, "Expected 2 items in enumeration.");
+        }
+
+
+        [TestMethod]
+        public void Serialization()
+        {
+            var dictionary = new ConcurrentDictionary<int, string>();
+
+            dictionary.Add(10, "ABC");
+            dictionary.Add(2, "DEF");
+
+            var memStream = new MemoryStream();
+
+            var formatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+
+            formatter.Serialize(memStream, dictionary);
+
+            memStream.Seek(0, SeekOrigin.Begin);
+
+            var clone = (ConcurrentDictionary<int, string>)formatter.Deserialize(memStream);
+
+            Assert.AreEqual("ABC", clone[10], "Item ABC not transfered");
+            Assert.AreEqual("DEF", clone[2], "Item DEF not transfered");
         }
     }
 }

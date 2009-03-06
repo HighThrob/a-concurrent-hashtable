@@ -39,7 +39,7 @@ namespace TvdP.Collections
 
             try
             {
-                foreach (var segment in EnumerateAmorphLockedSegments())
+                foreach (var segment in EnumerateAmorphLockedSegments(false))
                     ((WeakSegment<TStored, TSearch>)segment).DisposeGarbage(this);
             }
             finally
@@ -91,7 +91,7 @@ namespace TvdP.Collections
         /// <returns></returns>
         protected sealed override bool GetOldestItem(ref TStored searchKey, out TStored item)
         {
-            var segment = GetLockedSegment(this.GetItemHashCode(ref searchKey));
+            var segment = GetSegmentLockedForWriting(this.GetItemHashCode(ref searchKey));
 
             try
             {
@@ -109,7 +109,7 @@ namespace TvdP.Collections
                 return res;            
             }
             finally
-            { segment.Unlock(); }
+            { segment.ReleaseForWriting(); }
         }
     }
 }
