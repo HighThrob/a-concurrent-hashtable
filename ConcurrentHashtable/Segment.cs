@@ -26,8 +26,8 @@ namespace TvdP.Collections
     /// by 1 thread simultaneously, the hashtable becomes concurrent by containing many segments so that collisions
     /// are rare.
     /// Each segment is itself a small hashtable that can grow and shrink individualy. This prevents blocking of
-    /// the intire hashtable when growing or shrinking is needed. Becuase each segment is relatively small (depending on
-    /// the quality of the hash) resizing of the individual segments will not take much time.
+    /// the entire hashtable when growing or shrinking is needed. Because each segment is relatively small (depending on
+    /// the quality of the hash) resizing of the individual segments should not take much time.
     /// </remarks>
     internal class Segment<TStored,TSearch>
     {
@@ -66,30 +66,60 @@ namespace TvdP.Collections
         /// </summary>
         /// <param name="traits"></param>
         public void Bye(ConcurrentHashtable<TStored, TSearch> traits)
-        { traits.EffectTotalAllocatedSpace(-_List.Length); }
+        { 
+            traits.EffectTotalAllocatedSpace(-_List.Length);
+            _List = null;
+        }
 
 
         #endregion
 
         #region Locking
 
-        /// <summary>
-        /// Used to sync access to the segment. Only 1 thread at a time should have access to the segment.
-        /// </summary>
-        Int32 _Token;
+        ///// <summary>
+        ///// Used to sync access to the segment. Only 1 thread at a time should have access to the segment.
+        ///// </summary>
+        //Int32 _Token;
 
-        /// <summary>
-        /// Try to lock the segment. (locking is not enforced, clients need to check the lock themselves)
-        /// </summary>
-        /// <returns>True if the lock was successfuly aquired; otherwise false.</returns>
-        public bool Lock()
-        { return Interlocked.CompareExchange(ref _Token, 1, 0) == 0; }
+        ///// <summary>
+        ///// Try to lock the segment. (locking is not enforced, clients need to check the lock themselves)
+        ///// </summary>
+        ///// <returns>True if the lock was successfuly aquired; otherwise false.</returns>
+        //public bool Lock()
+        //{ return Interlocked.CompareExchange(ref _Token, 1, 0) == 0; }
 
-        /// <summary>
-        /// Unlock the segment. (Unchecked, client must be sure to hold the lock.)
-        /// </summary>
-        public void Unlock()
-        { Interlocked.Exchange(ref _Token, 0); }
+        ///// <summary>
+        ///// Unlock the segment. (Unchecked, client must be sure to hold the lock.)
+        ///// </summary>
+        //public void Unlock()
+        //{ Interlocked.Exchange(ref _Token, 0); }
+
+        TinyReaderWriterLock _Lock;
+
+        internal void LockForWriting()
+        { _Lock.LockForWriting(); }
+
+        internal void LockForReading()
+        { _Lock.LockForReading(); }
+
+        internal bool Lock(bool forReading)
+        { 
+            return forReading ? _Lock.LockForReading(false) : _Lock.LockForWriting(false); 
+        }
+
+        internal void ReleaseForWriting()
+        { _Lock.ReleaseForWriting(); }
+
+        internal void ReleaseForReading()
+        { _Lock.ReleaseForReading(); }
+
+        internal void Release(bool forReading)
+        {
+            if (forReading)
+                _Lock.ReleaseForReading();
+            else
+                _Lock.ReleaseForWriting();
+        }
 
         #endregion
 
@@ -97,6 +127,9 @@ namespace TvdP.Collections
         /// Array with 'slots' each slot can be filled or empty.
         /// </summary>
         internal TStored[] _List;
+
+        internal bool IsAlive { get { return _List != null; } }
+
 
         #region Item Manipulation methods
 

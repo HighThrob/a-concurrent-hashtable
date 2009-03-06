@@ -68,6 +68,7 @@
     <Compile Include="ConcurrentWeakHashtableHelper.cs" />
     <Compile Include="ConcurrentWeakDictionary.cs" />
     <Compile Include="ConcurrentWeakHashtable.cs" />
+    <Compile Include="TinyReaderWriterLock.cs" />
     <Compile Include="WeakSegment.cs" />
     <Compile Include="WeakSegmentrange.cs" />
   </ItemGroup>

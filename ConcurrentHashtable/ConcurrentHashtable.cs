@@ -161,17 +161,39 @@ namespace TvdP.Collections
         /// </summary>
         /// <param name="hash"></param>
         /// <returns></returns>
-        internal Segment<TStored, TSearch> GetLockedSegment(UInt32 hash)
+        internal Segment<TStored, TSearch> GetSegmentLockedForWriting(UInt32 hash)
         {
-            //If we can't get the lock directly re-aquire the segment.
             while (true)
             {
                 var segment = GetSegment(hash);
 
-                if (segment.Lock())
+                segment.LockForWriting();
+
+                if (segment.IsAlive)
                     return segment;
 
-                Thread.Sleep(0);
+                segment.ReleaseForWriting();
+            }
+        }
+
+        /// <summary>
+        /// Gets a LOCKED segment out of either _NewRange or _CurrentRange based on the hash value.
+        /// Unlock needs to be called on this segment before it can be used by other clients.
+        /// </summary>
+        /// <param name="hash"></param>
+        /// <returns></returns>
+        internal Segment<TStored, TSearch> GetSegmentLockedForReading(UInt32 hash)
+        {
+            while (true)
+            {
+                var segment = GetSegment(hash);
+
+                segment.LockForReading();
+
+                if (segment.IsAlive)
+                    return segment;
+
+                segment.ReleaseForReading();
             }
         }
 
@@ -183,14 +205,14 @@ namespace TvdP.Collections
         /// <returns>A boolean that will be true if an item has been found and false otherwise.</returns>
         protected bool FindItem(ref TSearch searchKey, out TStored item)
         {
-            var segment = GetLockedSegment(this.GetKeyHashCode(ref searchKey));
+            var segment = GetSegmentLockedForReading(this.GetKeyHashCode(ref searchKey));
 
             try
             {
                 return segment.FindItem(ref searchKey, out item, this);
             }
             finally
-            { segment.Unlock(); }
+            { segment.ReleaseForReading(); }
         }
 
         /// <summary>
@@ -202,14 +224,14 @@ namespace TvdP.Collections
         /// <returns>A boolean that will be true if an existing copy was found and false otherwise.</returns>
         protected virtual bool GetOldestItem(ref TStored searchKey, out TStored item)
         {
-            var segment = GetLockedSegment(this.GetItemHashCode(ref searchKey));
+            var segment = GetSegmentLockedForWriting(this.GetItemHashCode(ref searchKey));
 
             try
             {
                 return segment.GetOldestItem(ref searchKey, out item, this);
             }
             finally
-            { segment.Unlock(); }
+            { segment.ReleaseForWriting(); }
         }
 
         /// <summary>
@@ -220,14 +242,14 @@ namespace TvdP.Collections
         /// <returns>A boolean that will be true if an existing copy was found and replaced and false otherwise.</returns>
         protected bool InsertItem(ref TStored searchKey, out TStored replacedItem)
         {
-            var segment = GetLockedSegment(this.GetItemHashCode(ref searchKey));
+            var segment = GetSegmentLockedForWriting(this.GetItemHashCode(ref searchKey));
 
             try
             {
                 return segment.InsertItem(ref searchKey, out replacedItem, this);
             }
             finally
-            { segment.Unlock(); }
+            { segment.ReleaseForWriting(); }
         }
 
         /// <summary>
@@ -238,14 +260,14 @@ namespace TvdP.Collections
         /// <returns>A boolean that will be rue if an item was found and removed and false otherwise.</returns>
         protected bool RemoveItem(ref TSearch searchKey, out TStored removedItem)
         {
-            var segment = GetLockedSegment(this.GetKeyHashCode(ref searchKey));
+            var segment = GetSegmentLockedForWriting(this.GetKeyHashCode(ref searchKey));
 
             try
             {
                 return segment.RemoveItem(ref searchKey, out removedItem, this);
             }
             finally
-            { segment.Unlock(); }
+            { segment.ReleaseForWriting(); }
         }
 
         #endregion
@@ -260,7 +282,7 @@ namespace TvdP.Collections
         /// Lock SyncRoot before using this enumerable.
         /// </summary>
         /// <returns></returns>
-        internal IEnumerable<Segment<TStored, TSearch>> EnumerateAmorphLockedSegments()
+        internal IEnumerable<Segment<TStored, TSearch>> EnumerateAmorphLockedSegments(bool forReading)
         {
             //if segments are locked a queue will be created to try them later
             //this is so that we can continue with other not locked segments.
@@ -270,10 +292,10 @@ namespace TvdP.Collections
             {
                 var segment = _CurrentRange.GetSegmentByIndex(i);
 
-                if (segment.Lock())
+                if (segment.Lock(forReading))
                 {
                     try { yield return segment; }
-                    finally { segment.Unlock(); }
+                    finally { segment.Release(forReading); }
                 }
                 else
                 {
@@ -299,10 +321,10 @@ namespace TvdP.Collections
 
                     var segment = lockedSegmentIxs.Dequeue();
 
-                    if (segment.Lock())
+                    if (segment.Lock(forReading))
                     {
                         try { yield return segment; }
-                        finally { segment.Unlock(); }
+                        finally { segment.Release(forReading); }
                     }
                     else
                         lockedSegmentIxs.Enqueue(segment);
@@ -322,7 +344,7 @@ namespace TvdP.Collections
         {
             get
             {
-                foreach (var segment in EnumerateAmorphLockedSegments())
+                foreach (var segment in EnumerateAmorphLockedSegments(true))
                 {
                     int j = -1;
                     TStored foundItem;
@@ -342,7 +364,7 @@ namespace TvdP.Collections
         protected void Clear()
         { 
             lock(SyncRoot)
-                foreach(var segment in EnumerateAmorphLockedSegments())
+                foreach(var segment in EnumerateAmorphLockedSegments(false))
                     segment.Clear(this);
         }
 
@@ -378,14 +400,15 @@ namespace TvdP.Collections
         protected virtual Int32 MinSegments { get { return 4; } }
 
         /// <summary>
-        /// Gives the minimum number of allocated item slots per segment. This should be 1 or more and always a power of 2.
+        /// Gives the minimum number of allocated item slots per segment. This should be 1 or more, always a power of 2
+        /// and less than 1/2 of MeanSegmentAllocatedSpace.
         /// </summary>
         protected virtual Int32 MinSegmentAllocatedSpace { get { return 4; } }
 
         /// <summary>
         /// Gives the prefered number of allocated item slots per segment. This should 4 or more and always a power of 2.
         /// </summary>
-        protected virtual Int32 MeanSegmentAllocatedSpace { get { return 32; } }
+        protected virtual Int32 MeanSegmentAllocatedSpace { get { return 16; } }
 
         /// <summary>
         /// Determines if a segmentation adjustment is needed.
@@ -453,7 +476,7 @@ namespace TvdP.Collections
         protected virtual void AssessSegmentation()
         {
             //in case of a sudden loss of almost all content we
-            //may need to do this muliple times.
+            //may need to do this multiple times.
             while (SegmentationAdjustmentNeeded())
             {
                 var meanSegmentAllocatedSpace = MeanSegmentAllocatedSpace;
@@ -507,14 +530,14 @@ namespace TvdP.Collections
 
                     //increase total allocated space now. We can do this safely
                     //because at this point _AssessSegmentationPending flag will be true,
-                    //preventing an inmediate reassesment.
+                    //preventing an immediate reassesment.
                     Interlocked.Add(ref _AllocatedSpace, newSegmentCount * segmentSize);
 
                     //lock all new segments
                     //we are going to release these locks while we migrate the items from the
                     //old (current) range to the new range.
                     for (int i = 0, end = newRange.Count; i != end; ++i)
-                        newRange.GetSegmentByIndex(i).Lock();
+                        newRange.GetSegmentByIndex(i).LockForWriting();
 
                     //set new (completely locked) range
                     Interlocked.Exchange(ref _NewRange, newRange);
@@ -532,12 +555,22 @@ namespace TvdP.Collections
 
                     do
                     {
-                        //aquire segment to migrate
-                        var currentSegment = _CurrentRange.GetSegment(switchPoint);
+                        Segment<TStored, TSearch> currentSegment;
 
-                        //lock segment (never to release it)
-                        while (!currentSegment.Lock())
-                            Thread.Sleep(0);
+                        do
+                        {
+                            //aquire segment to migrate
+                            currentSegment = _CurrentRange.GetSegment(switchPoint);
+
+                            //lock segment 
+                            currentSegment.LockForWriting();
+
+                            if (currentSegment.IsAlive)
+                                break;
+
+                            currentSegment.ReleaseForWriting();
+                        }
+                        while (true);
 
                         //migrate all items in the segment to the new range
                         TStored currentKey;
@@ -555,8 +588,9 @@ namespace TvdP.Collections
                             newSegment.InsertItem(ref currentKey, out dummyKey, this);
                         }
 
-                        //substract allocated space from allocated space count.
+                        //substract allocated space from allocated space count and trash segment.
                         currentSegment.Bye(this);
+                        currentSegment.ReleaseForWriting();
 
                         if (switchPoint == 0 - currentSwitchPointStep)
                         {
@@ -582,7 +616,7 @@ namespace TvdP.Collections
                             
                             var newSegment = newRange.GetSegment(newLockedPoint);
                             newSegment.Trim(this);
-                            newSegment.Unlock();
+                            newSegment.ReleaseForWriting();
                             newLockedPoint = nextNewLockedPoint;
                         }
                     }
@@ -593,7 +627,7 @@ namespace TvdP.Collections
                     {
                         var newSegment = newRange.GetSegment(newLockedPoint);
                         newSegment.Trim(this);
-                        newSegment.Unlock();
+                        newSegment.ReleaseForWriting();
                         newLockedPoint += newSwitchPointStep;
                     }
                 }

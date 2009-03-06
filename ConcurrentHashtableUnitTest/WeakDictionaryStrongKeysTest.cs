@@ -14,6 +14,7 @@ using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SCG = System.Collections.Generic;
 using System.Threading;
+using System.IO;
 
 namespace TvdP.Collections
 {
@@ -231,6 +232,35 @@ namespace TvdP.Collections
 
             if( currentValues.Length != 0 )
                 Assert.Inconclusive("Expected 0 items in the array after GC.");
+        }
+
+        [TestMethod]
+        public void WeakDictionaryStrongKeysSerialization()
+        {
+            var dictionary = new ConcurrentWeakDictionaryStrongKeys<int, object>();
+
+            var items = new object[] {
+                dictionary,
+                "ABC","DEF" 
+            };
+
+            dictionary.Insert(10, items[1]);
+            dictionary.Insert(2, items[2]);
+
+            var memStream = new MemoryStream();
+
+            var formatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+
+            formatter.Serialize(memStream, items);
+
+            memStream.Seek(0, SeekOrigin.Begin);
+
+            var itemsClone = (object[])formatter.Deserialize(memStream);
+
+            var clone = (ConcurrentWeakDictionaryStrongKeys<int, object>)itemsClone[0];
+
+            Assert.AreEqual(itemsClone[1], clone[10], "Item ABC not transfered");
+            Assert.AreEqual(itemsClone[2], clone[2], "Item DEF not transfered");
         }
     }
 }

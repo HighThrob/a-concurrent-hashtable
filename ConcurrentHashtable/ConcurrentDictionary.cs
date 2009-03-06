@@ -11,6 +11,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Runtime.Serialization;
+using System.Security.Permissions;
 
 namespace TvdP.Collections
 {
@@ -52,7 +54,8 @@ namespace TvdP.Collections
     /// a set of items based on a hash of those items. The more segments there are and the beter the hash, the fewer collisions will occur.
     /// This means that a nearly empty ConcurrentDictionary is not as concurrent as one containing many items. 
     /// </remarks>
-    public sealed class ConcurrentDictionary<TKey, TValue> : ConcurrentHashtable<KeyValuePair<TKey, TValue>?, ConcurrentDictionaryKey<TKey, TValue>>, IDictionary<TKey, TValue> 
+    [Serializable]
+    public sealed class ConcurrentDictionary<TKey, TValue> : ConcurrentHashtable<KeyValuePair<TKey, TValue>?, ConcurrentDictionaryKey<TKey, TValue>>, IDictionary<TKey, TValue>, ISerializable 
     {
         #region Constructors
 
@@ -79,11 +82,28 @@ namespace TvdP.Collections
             Initialize();
         }
 
+        ConcurrentDictionary(SerializationInfo serializationInfo, StreamingContext streamingContext)
+        {
+            _Comparer = (IEqualityComparer<TKey>)serializationInfo.GetValue("Comparer", typeof(IEqualityComparer<TKey>));
+
+            var items = (List<KeyValuePair<TKey, TValue>>)serializationInfo.GetValue("Items", typeof(List<KeyValuePair<TKey, TValue>>));
+
+            if (_Comparer == null || items == null)
+                throw new SerializationException();
+
+            Initialize();
+
+            foreach (var kvp in items)
+                this.Add(kvp);        
+        }
+
         #endregion
 
         #region Traits
 
         readonly IEqualityComparer<TKey> _Comparer;
+
+        public IEqualityComparer<TKey> Comparer { get { return _Comparer; } }
 
         /// <summary>
         /// Get a hashcode for given storeable item.
@@ -381,6 +401,17 @@ namespace TvdP.Collections
         /// <returns>A <see cref="System.Collections.IEnumerator"/> that can be used to iterate through the associations.</returns>
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         { return GetEnumerator(); }
+
+        #endregion
+
+        #region ISerializable Members
+
+        [SecurityPermission(SecurityAction.Demand, SerializationFormatter=true)]
+        void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
+        { 
+            info.AddValue("Items", (object)Items.Select(item => item.Value).ToList());
+            info.AddValue("Comparer", _Comparer);
+        }
 
         #endregion
     }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Runtime.Serialization;
 
 namespace TvdP.Collections
 {
@@ -98,6 +99,7 @@ namespace TvdP.Collections
         }
     }
 
+    [Serializable]
     class ObjectComparerClass<TKey> : IEqualityComparer<object>
     {
         public IEqualityComparer<TKey> _KeyComparer;
@@ -121,9 +123,12 @@ namespace TvdP.Collections
     /// <remarks>
     /// Use only for expensive values.
     /// </remarks>
-    public sealed class Cache<TKey, TValue>
-    {      
+    [Serializable]
+    public sealed class Cache<TKey, TValue> : IDeserializationCallback
+    {   
+        [NonSerialized]
         Level1CacheClass<TKey> _Level1Cache;
+
         ConcurrentWeakDictionary<object, object> _Level2Cache;
 
         public Cache(IEqualityComparer<TKey> keyComparer)
@@ -136,6 +141,12 @@ namespace TvdP.Collections
             : this(EqualityComparer<TKey>.Default)
         { }
 
+        /// <summary>
+        /// Try to retrieve an item from the cache
+        /// </summary>
+        /// <param name="key">Key to find the item with.</param>
+        /// <param name="item">Out parameter that will receive the found item.</param>
+        /// <returns>A boolean value indicating if an item has been found.</returns>
         public bool TryGetItem(TKey key, out TValue item)
         {
             object storedItem;
@@ -158,6 +169,12 @@ namespace TvdP.Collections
             return false;
         }
 
+        /// <summary>
+        /// Tries to find an item in the cache but if it can not be found a new given item will be inserted and returned.
+        /// </summary>
+        /// <param name="key">The key to find an existing item or insert a new item with.</param>
+        /// <param name="newItem">The new item to insert if an existing item can not be found.</param>
+        /// <returns>The found item or the newly inserted item.</returns>
         public TValue GetOldest(TKey key, TValue newItem)
         {
             object item = newItem;
@@ -170,5 +187,14 @@ namespace TvdP.Collections
 
             return newItem;
         }
+
+        #region IDeserializationCallback Members
+
+        void IDeserializationCallback.OnDeserialization(object sender)
+        {
+            _Level1Cache = new Level1CacheClass<TKey>(((ObjectComparerClass<TKey>)_Level2Cache.Comparer)._KeyComparer);
+        }
+
+        #endregion
     }
 }
