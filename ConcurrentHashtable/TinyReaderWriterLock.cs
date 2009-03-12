@@ -69,6 +69,10 @@ namespace TvdP.Collections
         /// </summary>
         public void ReleaseForReading()
         {
+            //try shortcut first.
+            if (Interlocked.CompareExchange(ref _Bits, 0, 1) == 1)
+                return;
+
             Data data;
 
             do
@@ -96,6 +100,10 @@ namespace TvdP.Collections
         /// </summary>
         public void ReleaseForWriting()
         {
+            //try shortcut first.
+            if (Interlocked.CompareExchange(ref _Bits, 0, 1 << WriterInRegionOffset) == 1 << WriterInRegionOffset)
+                return;
+
             Data data;
 
             do
@@ -131,6 +139,10 @@ namespace TvdP.Collections
         /// <returns>Boolean indicating if lock was successfuly aquired.</returns>
         public bool LockForReading(bool wait)
         {
+            //try shortcut first.
+            if (Interlocked.CompareExchange(ref _Bits, 1, 0) == 0)
+                return true;
+
             bool waitingRegistered = false;
 
             try
@@ -208,6 +220,9 @@ namespace TvdP.Collections
                     {
                         GetData(out data);
                         --data._ReadersWaiting;
+
+                        if (data._ReadersInRegion == 0 && data._ReadersWaiting == 0)
+                            data._Bias = data._WritersWaiting != 0 ? Bias.Writers : Bias.None;
                     }
                     while (!SetData(ref data));
                 }
@@ -227,6 +242,10 @@ namespace TvdP.Collections
         /// <returns>Boolean indicating if lock was successfuly aquired.</returns>
         public bool LockForWriting(bool wait)
         {
+            //try shortcut first.
+            if (Interlocked.CompareExchange(ref _Bits, 1 << WriterInRegionOffset, 0) == 0)
+                return true;
+
             bool waitingRegistered = false;
 
             try
@@ -269,7 +288,7 @@ namespace TvdP.Collections
                     }
                     else
                     {
-                        if (!waitingRegistered && data._WritersWaiting < WritersWaitingMask)
+                        if (!waitingRegistered && data._WritersWaiting < WritersWaitingMask && wait)
                         {
                             ++data._WritersWaiting;
                             if (SetData(ref data))
@@ -304,6 +323,9 @@ namespace TvdP.Collections
                     {
                         GetData(out data);
                         --data._WritersWaiting;
+
+                        if (!data._WriterInRegion && data._WritersWaiting == 0)
+                            data._Bias = data._ReadersWaiting != 0 ? Bias.Readers : Bias.None;
                     }
                     while (!SetData(ref data));
                 }

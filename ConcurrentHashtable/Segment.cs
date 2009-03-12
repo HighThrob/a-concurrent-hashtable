@@ -29,7 +29,7 @@ namespace TvdP.Collections
     /// the entire hashtable when growing or shrinking is needed. Because each segment is relatively small (depending on
     /// the quality of the hash) resizing of the individual segments should not take much time.
     /// </remarks>
-    internal class Segment<TStored,TSearch>
+    internal class Segment<TStored,TSearch>    
     {
         #region Construction
 

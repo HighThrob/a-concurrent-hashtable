@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Diagnostics;
 
 namespace TvdP.Collections
 {
@@ -22,6 +23,12 @@ namespace TvdP.Collections
     /// <typeparam name="TSearch">Type of the key to search with.</typeparam>
     public abstract class ConcurrentHashtable<TStored, TSearch>
     {
+        static ConcurrentHashtable()
+        {
+            //Make sure diagnostics get initialized
+            Diagnostics.JustToWakeUp();
+        }
+
         /// <summary>
         /// Constructor (protected)
         /// </summary>
@@ -123,6 +130,17 @@ namespace TvdP.Collections
         /// <returns>True if the reference doesn't refer to a valid item; false otherwise.</returns>
         /// <remarks>The statement <code>IsEmpty(default(TStoredI))</code> should always be true.</remarks>
         internal protected abstract bool IsEmpty(ref TStored item);
+
+        /// <summary>
+        /// Returns the type of the key value or object.
+        /// </summary>
+        /// <param name="item">The stored item to get the type of the key for.</param>
+        /// <returns>The actual type of the key or null if it can not be determined.</returns>
+        /// <remarks>
+        /// Used for diagnostics purposes.
+        /// </remarks>
+        internal protected virtual Type GetKeyType(ref TStored item)
+        { return item == null ? null : item.GetType(); }
 
         #endregion
 
@@ -500,6 +518,11 @@ namespace TvdP.Collections
         /// <param name="segmentSize">The number of item slots to reserve in each segment.</param>
         void SetSegmentation(Int32 newSegmentCount, Int32 segmentSize)
         {
+            //Variables to detect a bad hash.
+            var totalNewSegmentSize = 0;
+            var largestSegmentSize = 0;
+            Segment<TStored,TSearch> largestSegment = null;
+
             lock (SyncRoot)
             {
 #if DEBUG
@@ -616,6 +639,17 @@ namespace TvdP.Collections
                             
                             var newSegment = newRange.GetSegment(newLockedPoint);
                             newSegment.Trim(this);
+
+                            var newSegmentSize = newSegment._Count;
+
+                            totalNewSegmentSize += newSegmentSize;
+
+                            if( newSegmentSize > largestSegmentSize )
+                            {
+                                largestSegmentSize = newSegmentSize;
+                                largestSegment = newSegment;
+                            }
+
                             newSegment.ReleaseForWriting();
                             newLockedPoint = nextNewLockedPoint;
                         }
@@ -627,10 +661,92 @@ namespace TvdP.Collections
                     {
                         var newSegment = newRange.GetSegment(newLockedPoint);
                         newSegment.Trim(this);
+
+                        var newSegmentSize = newSegment._Count;
+
+                        totalNewSegmentSize += newSegmentSize;
+
+                        if( newSegmentSize > largestSegmentSize )
+                        {
+                            largestSegmentSize = newSegmentSize;
+                            largestSegment = newSegment;
+                        }
+
                         newSegment.ReleaseForWriting();
                         newLockedPoint += newSwitchPointStep;
                     }
                 }
+            }
+
+            CheckBadHash(largestSegment, totalNewSegmentSize / newSegmentCount, largestSegmentSize); 
+        }
+
+        class HasCountClass
+        {
+            public TStored _Item;
+            public int _Count;
+        }
+
+        /// <summary>
+        /// Check for bad hash. If after resize there exists a segment with 64 times more elements than average this 
+        /// is very likely due to a bad hash. Report once for every table type.
+        /// </summary>
+        /// <param name="largestSegment"></param>
+        /// <param name="averageSegmentSize"></param>
+        /// <param name="largestSegmentSize"></param>
+        private void CheckBadHash(Segment<TStored, TSearch> largestSegment, int averageSegmentSize, int largestSegmentSize)
+        {
+            if( 
+                Diagnostics.ConcurrentHashtableSwitch.TraceWarning 
+                && largestSegment != null 
+                && averageSegmentSize * 64 < largestSegmentSize 
+                && !Diagnostics.TypeBadHashReportMap.ContainsKey(GetType())
+            )
+            {
+                largestSegment.LockForReading();
+
+                try
+                {
+                    if (largestSegment.IsAlive)
+                    {
+                        var mostRegularHashMasp = new Dictionary<uint, HasCountClass>();
+                        TStored storedItem;
+
+                        for (int i = -1; (i = largestSegment.GetNextItem(i, out storedItem, this)) >= 0; )
+                        {
+                            var hash = this.GetItemHashCode(ref storedItem);
+
+                            HasCountClass hc;
+
+                            if (mostRegularHashMasp.TryGetValue(hash, out hc))
+                                ++hc._Count;
+                            else
+                                mostRegularHashMasp.Add(hash, new HasCountClass { _Count= 1, _Item = storedItem });
+                        }
+
+                        var mostRepeatedHash = default(KeyValuePair<uint,HasCountClass>) ;
+
+                        foreach (var kvp in mostRegularHashMasp)
+                            if (mostRepeatedHash.Value == null || mostRepeatedHash.Value._Count < kvp.Value._Count)
+                                mostRepeatedHash = kvp;
+
+                        if (mostRepeatedHash.Value != null)
+                        {
+                            var keyType = GetKeyType(ref mostRepeatedHash.Value._Item);
+
+                            Trace.TraceWarning(
+                                "Segment contains 64 times more elements than average. This is probably caused by a bad hash.\n TableType:{0}\n Repeat count most often repeated hash:{1}\n Actual type of first key with most often repeated hash:{2}", 
+                                GetType().FullName, 
+                                mostRepeatedHash.Value._Count,
+                                keyType == null ? "<null>" : keyType.FullName
+                            );
+                        }
+
+                        Diagnostics.TypeBadHashReportMap[GetType()] = true;
+                    }
+                }
+                finally
+                { largestSegment.ReleaseForReading(); }
             }
         }
 

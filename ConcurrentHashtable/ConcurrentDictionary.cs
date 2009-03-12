@@ -158,6 +158,9 @@ namespace TvdP.Collections
         internal protected override bool IsEmpty(ref KeyValuePair<TKey, TValue>? item)
         { return !item.HasValue; }
 
+        protected internal override Type GetKeyType(ref KeyValuePair<TKey, TValue>? item)
+        { return !item.HasValue || item.Value.Key == null ? null : item.Value.Key.GetType(); }
+
         #endregion
 
         #region IDictionary<TKey,TValue> Members

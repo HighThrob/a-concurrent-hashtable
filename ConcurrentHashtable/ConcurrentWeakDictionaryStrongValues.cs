@@ -171,6 +171,16 @@ namespace TvdP.Collections
         internal protected override bool IsGarbage(ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item)
         { return item._Key != null && item._Key.Target == null; }
 
+        protected internal override Type GetKeyType(ref ConcurrentWeakDictionaryStrongValuesItem<TValue> item)
+        {
+            if (item._Key == null)
+                return null;
+
+            object key = item._Key.Target;
+
+            return key == null ? null : key.GetType();
+        }
+
         #endregion
 
         IEqualityComparer<TKey> _Comparer;
