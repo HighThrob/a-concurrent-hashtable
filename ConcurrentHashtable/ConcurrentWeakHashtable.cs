@@ -38,19 +38,24 @@ namespace TvdP.Collections
                 return false;
 
             try
-            {
-                foreach (var segment in EnumerateAmorphLockedSegments(false))
-                    ((WeakSegment<TStored, TSearch>)segment).DisposeGarbage(this);
-            }
+            { SweepGarbage(); }
             finally
             { Monitor.Exit(syncRoot); }
 
             return true;
         }
 
+        private void SweepGarbage()
+        {
+            foreach (var segment in EnumerateAmorphLockedSegments(false))
+                ((WeakSegment<TStored, TSearch>)segment).DisposeGarbage(this);
+        }
+
         protected override void AssessSegmentation()
         {
-            DoMaintenance();
+            lock (SyncRoot)
+                SweepGarbage();
+
             base.AssessSegmentation();
         }
 

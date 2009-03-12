@@ -14,6 +14,7 @@ using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SCG = System.Collections.Generic;
 using System.Threading;
+using System.IO;
 
 namespace TvdP.Collections
 {
@@ -628,5 +629,50 @@ namespace TvdP.Collections
             Assert.AreEqual(0, stub.Count, "Expected _Count to be 0 after clear, even after GC.");
         }
 
+        class BadHashObject
+        {
+            public override int GetHashCode()
+            { return 4839282; }
+        }
+
+        [TestMethod]
+        public void BadHashWarning()
+        {
+            var old = Diagnostics.ConcurrentHashtableSwitch;
+            Diagnostics.ConcurrentHashtableSwitch = new System.Diagnostics.TraceSwitch("ReplacedSwitch", "", "Warning");
+            Diagnostics.TypeBadHashReportMap = new Dictionary<Type,bool>();
+
+            try
+            {
+                var writer = new StringWriter();
+                var myListener = new System.Diagnostics.TextWriterTraceListener(writer);
+
+                System.Diagnostics.Trace.Listeners.Add(myListener);
+
+                try
+                {
+                    var dictionary = new ConcurrentDictionary<BadHashObject, int>();
+
+                    for (int i = 0; i < 1000; ++i)
+                        dictionary.Add(new BadHashObject(), i);
+
+                    System.Threading.Thread.Sleep(1000);
+
+                    myListener.Flush();
+                }
+                finally
+                { System.Diagnostics.Trace.Listeners.Remove(myListener); }
+
+                writer.Close();
+
+                var result = writer.ToString();
+
+                Assert.IsFalse(String.IsNullOrEmpty(result), "Bad hash not reported");                
+            }
+            finally
+            {
+                Diagnostics.ConcurrentHashtableSwitch = old;
+            }
+        }
     }
 }

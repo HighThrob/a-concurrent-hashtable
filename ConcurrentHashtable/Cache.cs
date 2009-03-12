@@ -69,6 +69,16 @@ namespace TvdP.Collections
             return item == null;
         }
 
+        protected internal override Type GetKeyType(ref Slot<TKey> item)
+        {
+            if (item == null)
+                return null;
+
+            object key = item._Key._Key;
+
+            return key == null ? null : key.GetType();
+        }
+
         public bool TryGetItem(TKey key, out object item)
         {
             Slot<TKey> slot;
