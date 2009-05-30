@@ -14,7 +14,7 @@ using System.Text;
 using System.Threading;
 using System.Diagnostics;
 
-namespace TvdP.Collections
+namespace TvdP.Threading
 {
     /// <summary>
     /// Tiny spin lock that allows multiple readers simultanously and 1 writer exclusively
