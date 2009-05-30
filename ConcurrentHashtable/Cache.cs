@@ -39,6 +39,18 @@ namespace TvdP.Collections
         int _GC2Count;
         IEqualityComparer<TKey> _KeyComparer;
 
+        /// <summary>
+        /// Table maintenance, removes all items marked as Garbage.
+        /// </summary>
+        /// <returns>
+        /// A boolean value indicating if the maintenance run could be performed without delay; false if there was a lock on the SyncRoot object
+        /// and the maintenance run could not be performed.
+        /// </returns>
+        /// <remarks>
+        /// This method is called regularly in sync with the garbage collector on a high-priority thread.
+        /// 
+        /// This override keeps track of GC.CollectionCount(2) to assess which items have been accessed recently.
+        /// </remarks>
         public override bool DoMaintenance()
         {
             _GC2Count = GC.CollectionCount(2);
@@ -153,12 +165,19 @@ namespace TvdP.Collections
 
         ConcurrentWeakDictionary<object, object> _Level2Cache;
 
+        /// <summary>
+        /// Constructs a new instance of <see cref="Cache{TKey,TValue}"/> using an explicit <see cref="IEqualityComparer{TKey}"/> of TKey to comparer keys.
+        /// </summary>
+        /// <param name="keyComparer">The <see cref="IEqualityComparer{TKey}"/> of TKey to compare keys with.</param>
         public Cache(IEqualityComparer<TKey> keyComparer)
         {
             _Level1Cache = new Level1CacheClass<TKey>(keyComparer);
             _Level2Cache = new ConcurrentWeakDictionary<object, object>(new ObjectComparerClass<TKey> { _KeyComparer = keyComparer });
         }
 
+        /// <summary>
+        /// Constructs a new instance of <see cref="Cache{TKey,TValue}"/> with the default key comparer.
+        /// </summary>
         public Cache()
             : this(EqualityComparer<TKey>.Default)
         { }

@@ -30,6 +30,13 @@ namespace TvdP.Collections
         /// <summary>
         /// Table maintenance, removes all items marked as Garbage.
         /// </summary>
+        /// <returns>
+        /// A boolean value indicating if the maintenance run could be performed without delay; false if there was a lock on the SyncRoot object
+        /// and the maintenance run could not be performed.
+        /// </returns>
+        /// <remarks>
+        /// This method is called regularly in sync with the garbage collector on a high-priority thread.
+        /// </remarks>
         public virtual bool DoMaintenance()
         {
             var syncRoot = SyncRoot;
@@ -51,6 +58,12 @@ namespace TvdP.Collections
                 ((WeakSegment<TStored, TSearch>)segment).DisposeGarbage(this);
         }
 
+        /// <summary>
+        /// This method is called when a re-segmentation is expected to be needed. It checks if it actually is needed and, if so, performs the re-segementation.
+        /// </summary>
+        /// <remarks>
+        /// This override first sweeps the table for garbage in an attempt to prevent re-segmentation.
+        /// </remarks>
         protected override void AssessSegmentation()
         {
             lock (SyncRoot)
@@ -89,11 +102,13 @@ namespace TvdP.Collections
         { return WeakSegmentrange<TStored, TSearch>.Create(segmentCount, initialSegmentSize); }
 
         /// <summary>
-        /// override, GetOldestItem should not return garbage items
+        /// Looks for an existing item in the table contents using an alternative copy. If it can be found it will be returned. 
+        /// If not then the alternative copy will be added to the table contents and the alternative copy will be returned.
         /// </summary>
-        /// <param name="searchKey"></param>
-        /// <param name="item"></param>
-        /// <returns></returns>
+        /// <param name="searchKey">A copy to search an already existing instance with</param>
+        /// <param name="item">Out reference to receive the found item or the alternative copy</param>
+        /// <returns>A boolean that will be true if an existing copy was found and false otherwise.</returns>
+        /// <remarks>This override does not return garbage items.</remarks>
         protected sealed override bool GetOldestItem(ref TStored searchKey, out TStored item)
         {
             var segment = GetSegmentLockedForWriting(this.GetItemHashCode(ref searchKey));

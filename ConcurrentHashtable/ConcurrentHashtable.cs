@@ -156,7 +156,7 @@ namespace TvdP.Collections
         /// Locking doesn't guarantee that the contents don't change, but prevents operations that would
         /// disrupt the enumeration process.
         /// Operations that use this lock:
-        /// _Count, Clear, DisposeGarbage and DoTableMaintenance.
+        /// Count, Clear, DisposeGarbage and AssessSegmentation.
         /// Keeping this lock will prevent the table from re-segmenting.
         /// </remarks>
         protected object SyncRoot { get { return _SyncRoot; } }
@@ -424,7 +424,7 @@ namespace TvdP.Collections
         protected virtual Int32 MinSegmentAllocatedSpace { get { return 4; } }
 
         /// <summary>
-        /// Gives the prefered number of allocated item slots per segment. This should 4 or more and always a power of 2.
+        /// Gives the prefered number of allocated item slots per segment. This should be 4 or more and always a power of 2.
         /// </summary>
         protected virtual Int32 MeanSegmentAllocatedSpace { get { return 16; } }
 
@@ -467,6 +467,9 @@ namespace TvdP.Collections
                     ThreadPool.QueueUserWorkItem(AssessSegmentation);
         }
 
+        /// <summary>
+        /// Schedule a call to the AssessSegmentation() method.
+        /// </summary>
         protected void ScheduleMaintenance()
         {
             if (Interlocked.Exchange(ref _AssessSegmentationPending, 1) == 0)
@@ -491,6 +494,9 @@ namespace TvdP.Collections
             }
         }
 
+        /// <summary>
+        /// This method is called when a re-segmentation is expected to be needed. It checks if it actually is needed and, if so, performs the re-segementation.
+        /// </summary>
         protected virtual void AssessSegmentation()
         {
             //in case of a sudden loss of almost all content we

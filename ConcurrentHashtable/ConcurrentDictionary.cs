@@ -103,6 +103,9 @@ namespace TvdP.Collections
 
         readonly IEqualityComparer<TKey> _Comparer;
 
+        /// <summary>
+        /// Gives the <see cref="IEqualityComparer{TKey}"/> of TKey that is used to compare keys.
+        /// </summary>
         public IEqualityComparer<TKey> Comparer { get { return _Comparer; } }
 
         /// <summary>

@@ -172,6 +172,9 @@ namespace TvdP.Collections
 
         IEqualityComparer<TKey> _Comparer;
 
+        /// <summary>
+        /// The <see cref="IEqualityComparer{TKey}"/> of TKey used to compare keys for equality.
+        /// </summary>
         public IEqualityComparer<TKey> Comparer { get { return _Comparer; } }
 
         UInt32 GetHashCode(TKey key)
