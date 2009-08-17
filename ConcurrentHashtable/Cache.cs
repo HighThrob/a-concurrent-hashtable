@@ -32,7 +32,11 @@ namespace TvdP.Collections
         public Level1CacheClass(IEqualityComparer<TKey> keyComparer)
         {
             _KeyComparer = keyComparer;
+#if !SILVERLIGHT
             _GC2Count = GC.CollectionCount(2);
+#else
+            _GC2Count = (int)(System.DateTime.Now.Ticks / 100000000L); //10 second intervals
+#endif
             base.Initialize();
         }
 
@@ -53,7 +57,11 @@ namespace TvdP.Collections
         /// </remarks>
         public override bool DoMaintenance()
         {
+#if !SILVERLIGHT
             _GC2Count = GC.CollectionCount(2);
+#else
+            _GC2Count = (int)( System.DateTime.Now.Ticks / 100000000L ); //10 second intervals
+#endif
             return base.DoMaintenance();
         }
 
@@ -133,14 +141,16 @@ namespace TvdP.Collections
         { base.Clear(); }
     }
 
+#if !SILVERLIGHT
     [Serializable]
+#endif
     class ObjectComparerClass<TKey> : IEqualityComparer<object>
     {
         public IEqualityComparer<TKey> _KeyComparer;
 
         #region IEqualityComparer<object> Members
 
-        public bool Equals(object x, object y)
+        public new bool Equals(object x, object y)
         { return _KeyComparer.Equals(((TKey)x), ((TKey)y)); }
 
         public int GetHashCode(object obj)
@@ -157,10 +167,17 @@ namespace TvdP.Collections
     /// <remarks>
     /// Use only for expensive values.
     /// </remarks>
+#if !SILVERLIGHT
     [Serializable]
-    public sealed class Cache<TKey, TValue> : IDeserializationCallback
+#endif
+    public sealed class Cache<TKey, TValue> 
+#if !SILVERLIGHT
+        : IDeserializationCallback
+#endif
     {   
+#if !SILVERLIGHT
         [NonSerialized]
+#endif
         Level1CacheClass<TKey> _Level1Cache;
 
         ConcurrentWeakDictionary<object, object> _Level2Cache;
@@ -238,6 +255,7 @@ namespace TvdP.Collections
             _Level1Cache.Clear();
         }
 
+#if !SILVERLIGHT
         #region IDeserializationCallback Members
 
         void IDeserializationCallback.OnDeserialization(object sender)
@@ -246,5 +264,6 @@ namespace TvdP.Collections
         }
 
         #endregion
+#endif
     }
 }

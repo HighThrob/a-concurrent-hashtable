@@ -18,14 +18,14 @@ using TvdP.Threading;
 namespace TvdP.Collections
 {
     /// <summary>
-    /// A singlethreaded segment in a hashtable. 
+    /// A 'single writer - multi reader' threaded segment in a hashtable. 
     /// </summary>
     /// <typeparam name="TStored"></typeparam>
     /// <typeparam name="TSearch"></typeparam>
     /// <remarks>
-    /// Though each segment can be accessed
-    /// by 1 thread simultaneously, the hashtable becomes concurrent by containing many segments so that collisions
-    /// are rare.
+    /// Though each segment can be accessed by 1 writer thread simultaneously, the hashtable becomes concurrent 
+    /// for writing by containing many segments so that collisions are rare. The table will be fully concurrent 
+    /// for read operations as far as they are not colliding with write operations.
     /// Each segment is itself a small hashtable that can grow and shrink individualy. This prevents blocking of
     /// the entire hashtable when growing or shrinking is needed. Because each segment is relatively small (depending on
     /// the quality of the hash) resizing of the individual segments should not take much time.
@@ -77,24 +77,6 @@ namespace TvdP.Collections
 
         #region Locking
 
-        ///// <summary>
-        ///// Used to sync access to the segment. Only 1 thread at a time should have access to the segment.
-        ///// </summary>
-        //Int32 _Token;
-
-        ///// <summary>
-        ///// Try to lock the segment. (locking is not enforced, clients need to check the lock themselves)
-        ///// </summary>
-        ///// <returns>True if the lock was successfuly aquired; otherwise false.</returns>
-        //public bool Lock()
-        //{ return Interlocked.CompareExchange(ref _Token, 1, 0) == 0; }
-
-        ///// <summary>
-        ///// Unlock the segment. (Unchecked, client must be sure to hold the lock.)
-        ///// </summary>
-        //public void Unlock()
-        //{ Interlocked.Exchange(ref _Token, 0); }
-
         TinyReaderWriterLock _Lock;
 
         internal void LockForWriting()
@@ -125,34 +107,39 @@ namespace TvdP.Collections
         #endregion
 
         /// <summary>
-        /// Array with 'slots' each slot can be filled or empty.
+        /// Array with 'slots'. Each slot can be filled or empty.
         /// </summary>
         internal TStored[] _List;
 
+        /// <summary>
+        /// Boolean value indicating if this segment has not been trashed yet.
+        /// </summary>
         internal bool IsAlive { get { return _List != null; } }
 
 
         #region Item Manipulation methods
 
+        /// <summary>
+        /// Inserts an item into a *not empty* spot given by position i. It moves items forward until an empty spot is found.
+        /// </summary>
+        /// <param name="mask"></param>
+        /// <param name="i"></param>
+        /// <param name="itemCopy"></param>
+        /// <param name="traits"></param>
         private void InsertItemAtIndex(UInt32 mask, UInt32 i, TStored itemCopy, ConcurrentHashtable<TStored, TSearch> traits)
         {
-            while (true)
+            do
             {
                 //swap
-                {
-                    TStored temp = _List[i];
-                    _List[i] = itemCopy;
-                    itemCopy = temp;
-                }
+                TStored temp = _List[i];
+                _List[i] = itemCopy;
+                itemCopy = temp;
 
                 i = (i + 1) & mask;
-
-                if (traits.IsEmpty(ref _List[i]))
-                {
-                    _List[i] = itemCopy;
-                    return;
-                }
             }
+            while(!traits.IsEmpty(ref _List[i]));
+
+            _List[i] = itemCopy;
         }
 
         /// <summary>
@@ -346,19 +333,15 @@ namespace TvdP.Collections
             var i = index;
             var j = (index + 1) & mask;
 
-            while(true)
+            while(!traits.IsEmpty(ref _List[j]) && (traits.GetItemHashCode(ref _List[j]) & mask) != j)
             {
-                if (traits.IsEmpty(ref _List[j]) || (traits.GetItemHashCode(ref _List[j]) & mask) == j)
-                {
-                    _List[i] = default(TStored);                    
-                    break;
-                }
-
                 _List[i] = _List[j];
 
                 i = j;
                 j = (j + 1) & mask;            
-            }            
+            }
+
+            _List[i] = default(TStored); 
         }
 
         public void Clear(ConcurrentHashtable<TStored, TSearch> traits)

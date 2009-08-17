@@ -29,25 +29,30 @@ namespace TvdP.Collections
         /// </summary>
         private static void RemoveVoidTables()
         {
-            int ctr = 0;
+            //empty head may remain.. not bad.
+            var pos = _TableList;
 
-            //trim list. remove all GC'd lists
-            for (int i = 0; i < _TableList.Count; ++i)
-            {
-                var wr = _TableList[i];
+            if(pos != null)
+                while (true)
+                {
+                    var next = pos.Next;
 
-                if (wr.Target != null)
-                    _TableList[ctr++] = wr;
-            }
+                    if (next == null)
+                        break;
 
-            _TableList.RemoveRange(ctr, _TableList.Count - ctr);
+                    if (next.Target == null)
+                        pos.Next = next.Next; //safe, only 1 thread doing this
+                    else
+                        pos = next;
+                }
         }
 
         /// <summary>
         /// true if a table maintenance session is scheduled or ongoing.
         /// </summary>
-        static bool _TableMaintenanceIsPending;
+        static int _TableMaintenanceIsPending = 0;
 
+#if !SILVERLIGHT
         /// <summary>
         /// Small timer that will
         /// check every 1/10 second if second level GC count increased. 
@@ -55,6 +60,15 @@ namespace TvdP.Collections
         static Timer _Timer = new Timer(CheckGCCount, null, 100, 100);
 
         static int _Level2GCCount;
+#else
+        /// <summary>
+        /// Small timer that will start a garbage sweep every 10 seconds.
+        /// In growing hashtables the garbage will get swept regularly but they
+        /// can not shrink without a sweep.
+        /// </summary>
+        static Timer _Timer = new Timer(CheckGCCount, null, 10000, 10000);
+#endif
+
 
         /// <summary>
         /// Checks if a garbage collection has indeed taken place and schedules
@@ -63,28 +77,16 @@ namespace TvdP.Collections
         /// <param name="dummy"></param>
         static internal void CheckGCCount(object dummy)
         {
-            WeakReference[] res = null;
-
-            if (Monitor.TryEnter(_TableList,50))
-                try
-                {
-                    if (!_TableMaintenanceIsPending && _Level2GCCount != GC.CollectionCount(2))
-                    {
-                        _TableMaintenanceIsPending = true;
-                        _Level2GCCount = GC.CollectionCount(2);
-
-                        RemoveVoidTables();
-
-                        res = _TableList.ToArray();
-                    }
-                }
-                finally 
-                {
-                    Monitor.Exit(_TableList);
-                }
-            
-            if (res != null)
+#if !SILVERLIGHT
+            if (_Level2GCCount != GC.CollectionCount(2) && Interlocked.CompareExchange(ref _TableMaintenanceIsPending, 1, 0) == 0)
             {
+                _Level2GCCount = GC.CollectionCount(2);
+#else
+            if (Interlocked.CompareExchange(ref _TableMaintenanceIsPending, 1, 0) == 0)
+            {
+#endif
+                RemoveVoidTables();
+
                 var thread = new System.Threading.Thread(
                     new ThreadStart(
                         delegate
@@ -93,9 +95,11 @@ namespace TvdP.Collections
                             {
                                 Queue<IMaintainable> delayedQueue = null;
 
-                                for (int i = 0, end = res.Length; i < end; ++i)
+                                var pos = _TableList;
+
+                                while (pos != null)
                                 {
-                                    var target = (IMaintainable)res[i].Target;
+                                    var target = (IMaintainable)pos.Target;
 
                                     if (target != null)
                                     {
@@ -107,6 +111,8 @@ namespace TvdP.Collections
                                             delayedQueue.Enqueue(target);
                                         }
                                     }
+
+                                    pos = pos.Next;
                                 }
 
                                 if (delayedQueue != null)
@@ -129,15 +135,17 @@ namespace TvdP.Collections
                             }
                             finally
                             {
-                                _TableMaintenanceIsPending = false;
+                                _TableMaintenanceIsPending = 0;
                             }
                         }
                     )
                 );
 
+#if !SILVERLIGHT
                 thread.Priority = ThreadPriority.Highest;
-
+#endif
                 thread.Start();
+                
             }
         }
 
@@ -146,18 +154,28 @@ namespace TvdP.Collections
 
         #region maintaining Tables list
 
+        class ListNode : WeakReference
+        {
+            public ListNode(object target) : base(target) { }
+            public ListNode Next;
+        }
+
         /// <summary>
         /// a list of all WeakHashtables
         /// </summary>
-        static List<WeakReference> _TableList = new List<WeakReference>();
+        static ListNode _TableList ;
 
         /// <summary>
         /// this is to be called from the constructor or initializer of a ConcurrentWeakHashtable instance
         /// </summary>
         internal static void Register(IMaintainable table)
         {
-            lock (_TableList)
-                _TableList.Add(new WeakReference(table));
+            var node = new ListNode(table);
+
+            //Next may not be assigned correct value yet when garbage sweep starts
+            //but this is not a very big deal.
+            node.Next = _TableList;
+            node.Next = Interlocked.Exchange(ref _TableList, node);
         }
 
         #endregion
