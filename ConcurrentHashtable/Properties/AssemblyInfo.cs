@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
@@ -35,4 +36,8 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyVersion("1.3.2.0")]
 [assembly: AssemblyFileVersion("1.3.2.0")]
 
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ConcurrentHashtableUnitTest")]
+#if !SILVERLIGHT
+[assembly: AllowPartiallyTrustedCallers]
+#endif
+
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ConcurrentHashtableUnitTest, PublicKey=002400000480000094000000060200000024000052534131000400000100010067e15a9c4eb00abf3fc98e94181b9754298f936a386819437b083892e24f048a136aaf6fbe936c1af093c2049c9bd15ad60494501628afe9ddc665933d9146e1c4e139c895e7c560e68f1bdc8ff2d19c0e350174a0a0df0a4fe8e8315164fba495d87205f9e1a6ab0582843d8f67566ee5b650ff4a2948510c9c0ee691e189a9")]

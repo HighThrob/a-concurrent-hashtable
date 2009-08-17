@@ -19,10 +19,14 @@ namespace TvdP.Threading
     /// <summary>
     /// Tiny spin lock that allows multiple readers simultanously and 1 writer exclusively
     /// </summary>
+#if !SILVERLIGHT
     [Serializable]
+#endif
     public struct TinyReaderWriterLock
     {
+#if !SILVERLIGHT
         [NonSerialized]
+#endif
         Int32 _Bits;
 
         const int ReadersInRegionOffset = 0;

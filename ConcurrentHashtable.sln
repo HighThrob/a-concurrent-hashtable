@@ -12,9 +12,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		LocalTestRun.testrunconfig = LocalTestRun.testrunconfig
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConcurrentHashtable_Silverlight", "ConcurrentHashtable\ConcurrentHashtable_Silverlight.csproj", "{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}"
+EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 3
+		SccNumberOfProjects = 4
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://tfs08.codeplex.com/
 		SccLocalPath0 = .
@@ -24,23 +26,38 @@ Global
 		SccProjectUniqueName2 = ConcurrentHashtableUnitTest\\ConcurrentHashtableUnitTest.csproj
 		SccProjectName2 = ConcurrentHashtableUnitTest
 		SccLocalPath2 = ConcurrentHashtableUnitTest
+		SccProjectUniqueName3 = ConcurrentHashtable\\ConcurrentHashtable_Silverlight.csproj
+		SccProjectName3 = ConcurrentHashtable
+		SccLocalPath3 = ConcurrentHashtable
 	EndGlobalSection
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = ConcurrentHashtable3.vsmdi
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug Silverlight|Any CPU = Debug Silverlight|Any CPU
 		Debug|Any CPU = Debug|Any CPU
+		Release Silverlight|Any CPU = Release Silverlight|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BECE7D18-E126-46C4-86C1-E37E6ADF88FD}.Debug Silverlight|Any CPU.ActiveCfg = Debug|Any CPU
 		{BECE7D18-E126-46C4-86C1-E37E6ADF88FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BECE7D18-E126-46C4-86C1-E37E6ADF88FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BECE7D18-E126-46C4-86C1-E37E6ADF88FD}.Release Silverlight|Any CPU.ActiveCfg = Release|Any CPU
 		{BECE7D18-E126-46C4-86C1-E37E6ADF88FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BECE7D18-E126-46C4-86C1-E37E6ADF88FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{87F762E3-62C0-4953-BE60-6F5CB7AD2831}.Debug Silverlight|Any CPU.ActiveCfg = Debug|Any CPU
 		{87F762E3-62C0-4953-BE60-6F5CB7AD2831}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{87F762E3-62C0-4953-BE60-6F5CB7AD2831}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{87F762E3-62C0-4953-BE60-6F5CB7AD2831}.Release Silverlight|Any CPU.ActiveCfg = Release|Any CPU
 		{87F762E3-62C0-4953-BE60-6F5CB7AD2831}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{87F762E3-62C0-4953-BE60-6F5CB7AD2831}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}.Debug Silverlight|Any CPU.ActiveCfg = Debug Silverlight|Any CPU
+		{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}.Debug Silverlight|Any CPU.Build.0 = Debug Silverlight|Any CPU
+		{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}.Debug|Any CPU.ActiveCfg = Debug Silverlight|Any CPU
+		{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}.Release Silverlight|Any CPU.ActiveCfg = Release Silverlight|Any CPU
+		{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}.Release Silverlight|Any CPU.Build.0 = Release Silverlight|Any CPU
+		{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}.Release|Any CPU.ActiveCfg = Release Silverlight|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

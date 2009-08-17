@@ -23,11 +23,13 @@ namespace TvdP.Collections
     /// <typeparam name="TSearch">Type of the key to search with.</typeparam>
     public abstract class ConcurrentHashtable<TStored, TSearch>
     {
+#if !SILVERLIGHT
         static ConcurrentHashtable()
         {
             //Make sure diagnostics get initialized
             Diagnostics.JustToWakeUp();
         }
+#endif
 
         /// <summary>
         /// Constructor (protected)
@@ -624,7 +626,7 @@ namespace TvdP.Collections
                         if (switchPoint == 0 - currentSwitchPointStep)
                         {
                             //we are about to wrap _SwitchPoint arround.
-                            //We have migrated all items from the intere table to the
+                            //We have migrated all items from the entire table to the
                             //new range.
                             //replace current with new before advancing, otherwise
                             //we would create a completely blocked table.
@@ -684,9 +686,12 @@ namespace TvdP.Collections
                 }
             }
 
+#if !SILVERLIGHT
             CheckBadHash(largestSegment, totalNewSegmentSize / newSegmentCount, largestSegmentSize); 
+#endif
         }
 
+#if !SILVERLIGHT
         class HasCountClass
         {
             public TStored _Item;
@@ -755,7 +760,7 @@ namespace TvdP.Collections
                 { largestSegment.ReleaseForReading(); }
             }
         }
-
+#endif
         #endregion
     }
 }

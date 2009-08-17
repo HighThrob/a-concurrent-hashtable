@@ -54,8 +54,16 @@ namespace TvdP.Collections
     /// a set of items based on a hash of those items. The more segments there are and the beter the hash, the fewer collisions will occur.
     /// This means that a nearly empty ConcurrentDictionary is not as concurrent as one containing many items. 
     /// </remarks>
+#if !SILVERLIGHT
     [Serializable]
-    public sealed class ConcurrentDictionary<TKey, TValue> : ConcurrentHashtable<KeyValuePair<TKey, TValue>?, ConcurrentDictionaryKey<TKey, TValue>>, IDictionary<TKey, TValue>, ISerializable 
+#endif
+    public sealed class ConcurrentDictionary<TKey, TValue> 
+        : ConcurrentHashtable<KeyValuePair<TKey, TValue>?
+            , ConcurrentDictionaryKey<TKey, TValue>>
+            , IDictionary<TKey, TValue>
+#if !SILVERLIGHT
+            , ISerializable 
+#endif
     {
         #region Constructors
 
@@ -82,6 +90,7 @@ namespace TvdP.Collections
             Initialize();
         }
 
+#if !SILVERLIGHT
         ConcurrentDictionary(SerializationInfo serializationInfo, StreamingContext streamingContext)
         {
             _Comparer = (IEqualityComparer<TKey>)serializationInfo.GetValue("Comparer", typeof(IEqualityComparer<TKey>));
@@ -96,6 +105,7 @@ namespace TvdP.Collections
             foreach (var kvp in items)
                 this.Add(kvp);        
         }
+#endif
 
         #endregion
 
@@ -410,6 +420,7 @@ namespace TvdP.Collections
 
         #endregion
 
+#if !SILVERLIGHT
         #region ISerializable Members
 
         [SecurityPermission(SecurityAction.Demand, SerializationFormatter=true)]
@@ -418,7 +429,8 @@ namespace TvdP.Collections
             info.AddValue("Items", (object)Items.Select(item => item.Value).ToList());
             info.AddValue("Comparer", _Comparer);
         }
-
         #endregion
+#endif
+
     }
 }

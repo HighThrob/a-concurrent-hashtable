@@ -57,8 +57,15 @@ namespace TvdP.Collections
     /// </summary>
     /// <typeparam name="TKey">Type of the keys.</typeparam>
     /// <typeparam name="TValue">Type of the values. This must be a reference type.</typeparam>
+#if !SILVERLIGHT
     [Serializable]
-    public sealed class ConcurrentWeakDictionaryStrongKeys<TKey, TValue> : ConcurrentWeakHashtable<ConcurrentWeakDictionaryStrongKeysItem<TKey>, ConcurrentWeakDictionaryStrongKeysKey<TKey>>, ISerializable
+#endif
+    public sealed class ConcurrentWeakDictionaryStrongKeys<TKey, TValue> 
+        : ConcurrentWeakHashtable<ConcurrentWeakDictionaryStrongKeysItem<TKey>
+            , ConcurrentWeakDictionaryStrongKeysKey<TKey>>
+#if !SILVERLIGHT
+            , ISerializable
+#endif
         where TValue : class
     {
         #region Constructors
@@ -86,6 +93,7 @@ namespace TvdP.Collections
             Initialize();
         }
 
+#if !SILVERLIGHT
         ConcurrentWeakDictionaryStrongKeys(SerializationInfo serializationInfo, StreamingContext streamingContext)
         {
             _Comparer = (IEqualityComparer<TKey>)serializationInfo.GetValue("Comparer", typeof(IEqualityComparer<TKey>));
@@ -99,6 +107,7 @@ namespace TvdP.Collections
             foreach (var kvp in items)
                 Insert(kvp.Key, kvp.Value);
         }
+#endif
 
         #endregion
 
@@ -343,6 +352,7 @@ namespace TvdP.Collections
 
         #endregion
 
+#if !SILVERLIGHT
         #region ISerializable Members
 
         [SecurityPermission(SecurityAction.Demand, SerializationFormatter=true)]
@@ -359,5 +369,6 @@ namespace TvdP.Collections
         }
 
         #endregion
+#endif
     }
 }
