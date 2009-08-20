@@ -154,11 +154,25 @@ namespace TvdP.Collections
 
         #region maintaining Tables list
 
-        class ListNode : WeakReference
+#if SILVERLIGHT
+        sealed class ListNode 
+        {
+            public ListNode(object target) 
+            { _Reference = new WeakReference(target); }
+
+            WeakReference _Reference;
+
+            public object Target { get { return _Reference.Target; } }
+
+            public ListNode Next;
+        }
+#else
+        sealed class ListNode : WeakReference
         {
             public ListNode(object target) : base(target) { }
             public ListNode Next;
         }
+#endif
 
         /// <summary>
         /// a list of all WeakHashtables
