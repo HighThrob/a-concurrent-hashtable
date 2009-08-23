@@ -34,30 +34,22 @@ Global
 		CategoryFile = ConcurrentHashtable3.vsmdi
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug Silverlight|Any CPU = Debug Silverlight|Any CPU
 		Debug|Any CPU = Debug|Any CPU
-		Release Silverlight|Any CPU = Release Silverlight|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{BECE7D18-E126-46C4-86C1-E37E6ADF88FD}.Debug Silverlight|Any CPU.ActiveCfg = Debug|Any CPU
 		{BECE7D18-E126-46C4-86C1-E37E6ADF88FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BECE7D18-E126-46C4-86C1-E37E6ADF88FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BECE7D18-E126-46C4-86C1-E37E6ADF88FD}.Release Silverlight|Any CPU.ActiveCfg = Release|Any CPU
 		{BECE7D18-E126-46C4-86C1-E37E6ADF88FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BECE7D18-E126-46C4-86C1-E37E6ADF88FD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{87F762E3-62C0-4953-BE60-6F5CB7AD2831}.Debug Silverlight|Any CPU.ActiveCfg = Debug|Any CPU
 		{87F762E3-62C0-4953-BE60-6F5CB7AD2831}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{87F762E3-62C0-4953-BE60-6F5CB7AD2831}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{87F762E3-62C0-4953-BE60-6F5CB7AD2831}.Release Silverlight|Any CPU.ActiveCfg = Release|Any CPU
 		{87F762E3-62C0-4953-BE60-6F5CB7AD2831}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{87F762E3-62C0-4953-BE60-6F5CB7AD2831}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}.Debug Silverlight|Any CPU.ActiveCfg = Debug Silverlight|Any CPU
-		{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}.Debug Silverlight|Any CPU.Build.0 = Debug Silverlight|Any CPU
 		{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}.Debug|Any CPU.ActiveCfg = Debug Silverlight|Any CPU
-		{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}.Release Silverlight|Any CPU.ActiveCfg = Release Silverlight|Any CPU
-		{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}.Release Silverlight|Any CPU.Build.0 = Release Silverlight|Any CPU
+		{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}.Debug|Any CPU.Build.0 = Debug Silverlight|Any CPU
 		{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}.Release|Any CPU.ActiveCfg = Release Silverlight|Any CPU
+		{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}.Release|Any CPU.Build.0 = Release Silverlight|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
