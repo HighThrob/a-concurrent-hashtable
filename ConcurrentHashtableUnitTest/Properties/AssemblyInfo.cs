@@ -34,4 +34,6 @@ using System.Security;
 // by using the '*' as shown below:
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
+
+[assembly: SecurityRules(System.Security.SecurityRuleSet.Level1)]
 [assembly: AllowPartiallyTrustedCallers]
