@@ -151,10 +151,10 @@ namespace TvdP.Collections
         #region IEqualityComparer<object> Members
 
         public new bool Equals(object x, object y)
-        { return _KeyComparer.Equals(((TKey)x), ((TKey)y)); }
+        { return x == null ? y == null : (y != null && _KeyComparer.Equals((TKey)x, (TKey)y)); }
 
         public int GetHashCode(object obj)
-        { return _KeyComparer.GetHashCode(((TKey)obj)); }
+        { return _KeyComparer.GetHashCode((TKey)obj); }
 
         #endregion
     }
@@ -211,10 +211,14 @@ namespace TvdP.Collections
 
             bool found = _Level1Cache.TryGetItem(key, out storedItem);
 
-            if (!found && _Level2Cache.TryGetValue((object)key, out storedItem))
+            if (!found)
             {
-                found = true;
-                _Level1Cache.GetOldestItem(key, ref storedItem);
+                var keyAsObject = (object)key;
+                if (keyAsObject != null && _Level2Cache.TryGetValue(keyAsObject, out storedItem))
+                {
+                    found = true;
+                    _Level1Cache.GetOldestItem(key, ref storedItem);
+                }
             }
 
             if (found)
@@ -235,15 +239,16 @@ namespace TvdP.Collections
         /// <returns>The found item or the newly inserted item.</returns>
         public TValue GetOldest(TKey key, TValue newItem)
         {
-            object item = newItem;
+            object item = (object)newItem;
 
-            if (!_Level1Cache.GetOldestItem(key, ref item)) //return false.. no existing item was found
-            {
-                _Level2Cache.Insert((object)key, item);
-                return (TValue)item;
-            }
+            var keyAsObject = (object)key;
+            if (keyAsObject != null)
+                item = _Level2Cache.GetOldest(keyAsObject, item);                   
 
-            return newItem;
+            _Level1Cache.GetOldestItem(key, ref item);
+            
+
+            return (TValue)item;
         }
 
         /// <summary>

@@ -1,15 +1,16 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConcurrentHashtable", "ConcurrentHashtable\ConcurrentHashtable.csproj", "{BECE7D18-E126-46C4-86C1-E37E6ADF88FD}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConcurrentHashtableUnitTest", "ConcurrentHashtableUnitTest\ConcurrentHashtableUnitTest.csproj", "{87F762E3-62C0-4953-BE60-6F5CB7AD2831}"
-EndProject
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4E3932A0-D2EF-4086-AB9C-3D1043BE9D7E}"
 	ProjectSection(SolutionItems) = preProject
 		ConcurrentHashtable.vsmdi = ConcurrentHashtable.vsmdi
+		ConcurrentHashtable1.vsmdi = ConcurrentHashtable1.vsmdi
 		LocalTestRun.testrunconfig = LocalTestRun.testrunconfig
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConcurrentHashtable", "ConcurrentHashtable\ConcurrentHashtable.csproj", "{BECE7D18-E126-46C4-86C1-E37E6ADF88FD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConcurrentHashtableUnitTest", "ConcurrentHashtableUnitTest\ConcurrentHashtableUnitTest.csproj", "{87F762E3-62C0-4953-BE60-6F5CB7AD2831}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConcurrentHashtable_Silverlight", "ConcurrentHashtable\ConcurrentHashtable_Silverlight.csproj", "{3277F58A-26F5-4749-BB4C-9984C2AEA6D2}"
 EndProject
@@ -17,7 +18,7 @@ Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
 		SccNumberOfProjects = 4
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-		SccTeamFoundationServer = https://tfs08.codeplex.com/
+		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs08
 		SccLocalPath0 = .
 		SccProjectUniqueName1 = ConcurrentHashtable\\ConcurrentHashtable.csproj
 		SccProjectName1 = ConcurrentHashtable
@@ -28,6 +29,9 @@ Global
 		SccProjectUniqueName3 = ConcurrentHashtable\\ConcurrentHashtable_Silverlight.csproj
 		SccProjectName3 = ConcurrentHashtable
 		SccLocalPath3 = ConcurrentHashtable
+	EndGlobalSection
+	GlobalSection(TestCaseManagementSettings) = postSolution
+		CategoryFile = ConcurrentHashtable1.vsmdi
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
