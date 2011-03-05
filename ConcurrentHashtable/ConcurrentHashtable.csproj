@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>TvdP.Collections</RootNamespace>
     <AssemblyName>ConcurrentHashtable</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>
     <SccLocalPath>SAK</SccLocalPath>
@@ -22,6 +22,7 @@
     </FileUpgradeFlags>
     <OldToolsVersion>3.5</OldToolsVersion>
     <UpgradeBackupLocation />
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -59,22 +60,26 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cache.cs" />
-    <Compile Include="Diagnostics.cs" />
+    <Compile Include="HeapType.cs" />
+    <Compile Include="KeyComparer.cs" />
+    <Compile Include="WeakKeyDictionary.4.cs" />
+    <Compile Include="WeakKeyDictionary.3.cs" />
+    <Compile Include="WeakKeyDictionary.2.cs" />
+    <Compile Include="WeakDictionary.4.cs" />
+    <Compile Include="WeakDictionary.3.cs" />
+    <Compile Include="WeakKeyDictionary.1.cs" />
+    <Compile Include="WeakValueDictionary.cs" />
+    <Compile Include="WeakDictionary.2.cs" />
+    <Compile Include="InternalWeakDictionaryBase.cs" />
     <Compile Include="IMaintainable.cs" />
-    <Compile Include="ConcurrentWeakDictionaryStrongKeys.cs" />
-    <Compile Include="ConcurrentWeakDictionaryStrongValues.cs" />
-    <Compile Include="ConcurrentDictionary.cs" />
     <Compile Include="Hasher.cs" />
+    <Compile Include="Key.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Segmentrange.cs" />
-    <Compile Include="Segment.cs" />
-    <Compile Include="ConcurrentHashtable.cs" />
-    <Compile Include="ConcurrentWeakHashtableHelper.cs" />
-    <Compile Include="ConcurrentWeakDictionary.cs" />
-    <Compile Include="ConcurrentWeakHashtable.cs" />
+    <Compile Include="MaintenanceWorker.cs" />
     <Compile Include="TinyReaderWriterLock.cs" />
-    <Compile Include="WeakSegment.cs" />
-    <Compile Include="WeakSegmentrange.cs" />
+    <Compile Include="TransformedCollection.cs" />
+    <Compile Include="WeakDictionary.1.cs" />
+    <Compile Include="DictionaryBase.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="dev.snk" />

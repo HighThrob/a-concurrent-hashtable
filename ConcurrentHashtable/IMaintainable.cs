@@ -22,10 +22,6 @@ namespace TvdP.Collections
         /// <summary>
         /// Method called by a background worker thread to do maintenance deeded by the object.
         /// </summary>
-        /// <returns>
-        /// A boolean value indicating if the maintenance run could be performed without delay.
-        /// If the process needs to wait for a resource to become available, it should not wait but return with false.
-        /// </returns>
-        bool DoMaintenance();
+        void DoMaintenance();
     }
 }
