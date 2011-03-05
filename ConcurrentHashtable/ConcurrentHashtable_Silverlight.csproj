@@ -14,7 +14,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>TvdP.Collections</RootNamespace>
     <AssemblyName>ConcurrentHashtable_Silverlight</AssemblyName>
-    <TargetFrameworkVersion>v3.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <SilverlightApplication>false</SilverlightApplication>
     <ValidateXaml>true</ValidateXaml>
     <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
@@ -30,6 +30,7 @@
     </FileUpgradeFlags>
     <OldToolsVersion>3.5</OldToolsVersion>
     <UpgradeBackupLocation />
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug Silverlight|AnyCPU' ">
     <OutputPath>bin\Debug Silverlight\</OutputPath>
@@ -62,20 +63,28 @@
     <Compile Include="Cache.cs" />
     <Compile Include="ConcurrentDictionary.cs" />
     <Compile Include="ConcurrentHashtable.cs" />
-    <Compile Include="ConcurrentWeakDictionary.cs" />
-    <Compile Include="ConcurrentWeakDictionaryStrongKeys.cs" />
-    <Compile Include="ConcurrentWeakDictionaryStrongValues.cs" />
-    <Compile Include="ConcurrentWeakHashtable.cs" />
-    <Compile Include="ConcurrentWeakHashtableHelper.cs" />
-    <Compile Include="Diagnostics.cs" />
+    <Compile Include="DictionaryBase.cs" />
     <Compile Include="Hasher.cs" />
+    <Compile Include="HeapType.cs" />
     <Compile Include="IMaintainable.cs" />
+    <Compile Include="InternalWeakDictionaryBase.cs" />
+    <Compile Include="Key.cs" />
+    <Compile Include="KeyComparer.cs" />
+    <Compile Include="MaintenanceWorker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Segment.cs" />
     <Compile Include="Segmentrange.cs" />
     <Compile Include="TinyReaderWriterLock.cs" />
-    <Compile Include="WeakSegment.cs" />
-    <Compile Include="WeakSegmentrange.cs" />
+    <Compile Include="TransformedCollection.cs" />
+    <Compile Include="WeakDictionary.1.cs" />
+    <Compile Include="WeakDictionary.2.cs" />
+    <Compile Include="WeakDictionary.3.cs" />
+    <Compile Include="WeakDictionary.4.cs" />
+    <Compile Include="WeakKeyDictionary.1.cs" />
+    <Compile Include="WeakKeyDictionary.2.cs" />
+    <Compile Include="WeakKeyDictionary.3.cs" />
+    <Compile Include="WeakKeyDictionary.4.cs" />
+    <Compile Include="WeakValueDictionary.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="dev.snk" />

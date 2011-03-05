@@ -12,36 +12,36 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Runtime.Serialization;
+using System.Collections;
+using System.Security;
+
+#if !SILVERLIGHT
+using System.Collections.Concurrent;
+#endif
+
 
 namespace TvdP.Collections
 {
-    struct KeyStruct<TKey>
-    {
-        public TKey _Key;
-        public uint _Hash;
-    }
-    class Slot<TKey>
+    class Slot
     {
         public object _Item;
-        public KeyStruct<TKey> _Key;
         public int _GC2WhenLastUsed;
     }
 
-    sealed class Level1CacheClass<TKey> : ConcurrentWeakHashtable<Slot<TKey>, TKey>
+    sealed class Level1CacheClass<TKey> : ConcurrentDictionary<TKey,Slot>, IMaintainable
     {
         public Level1CacheClass(IEqualityComparer<TKey> keyComparer)
+            : base(keyComparer)
         {
-            _KeyComparer = keyComparer;
 #if !SILVERLIGHT
             _GC2Count = GC.CollectionCount(2);
 #else
             _GC2Count = (int)(System.DateTime.Now.Ticks / 100000000L); //10 second intervals
 #endif
-            base.Initialize();
+            MaintenanceWorker.Register(this);
         }
 
         int _GC2Count;
-        IEqualityComparer<TKey> _KeyComparer;
 
         /// <summary>
         /// Table maintenance, removes all items marked as Garbage.
@@ -55,64 +55,30 @@ namespace TvdP.Collections
         /// 
         /// This override keeps track of GC.CollectionCount(2) to assess which items have been accessed recently.
         /// </remarks>
-        public override bool DoMaintenance()
+        void IMaintainable.DoMaintenance()
         {
 #if !SILVERLIGHT
-            _GC2Count = GC.CollectionCount(2);
+            int newCount = GC.CollectionCount(2);
 #else
-            _GC2Count = (int)( System.DateTime.Now.Ticks / 100000000L ); //10 second intervals
+            int newCount = (int)( System.DateTime.Now.Ticks / 100000000L ); //10 second intervals
 #endif
-            return base.DoMaintenance();
-        }
-
-        protected internal override bool IsGarbage(ref Slot<TKey> item)
-        {
-            unchecked
+            if (newCount != _GC2Count)
             {
-                return item != null && item._GC2WhenLastUsed - _GC2Count < -1;
+                _GC2Count = newCount;
+
+                Slot dummy;
+
+                foreach (var kvp in this)
+                    if (kvp.Value._GC2WhenLastUsed - _GC2Count < -1)
+                        this.TryRemove(kvp.Key, out dummy);
             }
-        }
-
-        protected internal override uint GetItemHashCode(ref Slot<TKey> item)
-        {
-            return item._Key._Hash;
-        }
-
-        protected internal override uint GetKeyHashCode(ref TKey key)
-        {
-            return Hasher.Rehash(_KeyComparer.GetHashCode(key));
-        }
-
-        protected internal override bool ItemEqualsKey(ref Slot<TKey> item, ref TKey key)
-        {
-            return _KeyComparer.Equals(item._Key._Key, key);
-        }
-
-        protected internal override bool ItemEqualsItem(ref Slot<TKey> item1, ref Slot<TKey> item2)
-        {
-            return _KeyComparer.Equals(item1._Key._Key, item2._Key._Key);
-        }
-
-        protected internal override bool IsEmpty(ref Slot<TKey> item)
-        {
-            return item == null;
-        }
-
-        protected internal override Type GetKeyType(ref Slot<TKey> item)
-        {
-            if (item == null)
-                return null;
-
-            object key = item._Key._Key;
-
-            return key == null ? null : key.GetType();
         }
 
         public bool TryGetItem(TKey key, out object item)
         {
-            Slot<TKey> slot;
+            Slot slot;
 
-            if (base.FindItem(ref key, out slot))
+            if (base.TryGetValue(key, out slot))
             {
                 item = slot._Item;
                 slot._GC2WhenLastUsed = _GC2Count;
@@ -125,25 +91,16 @@ namespace TvdP.Collections
 
         public bool GetOldestItem(TKey key, ref object item)
         {
-            Slot<TKey> searchSlot = new Slot<TKey> { _Item = item, _GC2WhenLastUsed = _GC2Count, _Key = new KeyStruct<TKey> { _Key = key, _Hash = GetKeyHashCode(ref key) } };
-            Slot<TKey> foundSlot;
+            var newSlot = new Slot() { _Item = item, _GC2WhenLastUsed = _GC2Count };
+            var slot = base.GetOrAdd(key, newSlot);
 
-            bool res = base.GetOldestItem(ref searchSlot, out foundSlot);
+            item = slot._Item;
+            slot._GC2WhenLastUsed = _GC2Count;
 
-            foundSlot._GC2WhenLastUsed = _GC2Count;
-
-            item = foundSlot._Item;
-
-            return res;
+            return object.ReferenceEquals(newSlot, slot);
         }
-
-        public new void Clear()
-        { base.Clear(); }
     }
 
-#if !SILVERLIGHT
-    [Serializable]
-#endif
     class ObjectComparerClass<TKey> : IEqualityComparer<object>
     {
         public IEqualityComparer<TKey> _KeyComparer;
@@ -172,15 +129,12 @@ namespace TvdP.Collections
 #endif
     public sealed class Cache<TKey, TValue> 
 #if !SILVERLIGHT
-        : IDeserializationCallback
+        : ISerializable
 #endif
-    {   
-#if !SILVERLIGHT
-        [NonSerialized]
-#endif
+    {
+        IEqualityComparer<TKey> _keyComparer;
         Level1CacheClass<TKey> _Level1Cache;
-
-        ConcurrentWeakDictionary<object, object> _Level2Cache;
+        WeakDictionary<object,bool, object> _Level2Cache;
 
         /// <summary>
         /// Constructs a new instance of <see cref="Cache{TKey,TValue}"/> using an explicit <see cref="IEqualityComparer{TKey}"/> of TKey to comparer keys.
@@ -188,8 +142,9 @@ namespace TvdP.Collections
         /// <param name="keyComparer">The <see cref="IEqualityComparer{TKey}"/> of TKey to compare keys with.</param>
         public Cache(IEqualityComparer<TKey> keyComparer)
         {
+            _keyComparer = keyComparer;
             _Level1Cache = new Level1CacheClass<TKey>(keyComparer);
-            _Level2Cache = new ConcurrentWeakDictionary<object, object>(new ObjectComparerClass<TKey> { _KeyComparer = keyComparer });
+            _Level2Cache = new WeakDictionary<object,bool, object>(new ObjectComparerClass<TKey> { _KeyComparer = keyComparer }, EqualityComparer<bool>.Default);
         }
 
         /// <summary>
@@ -198,6 +153,28 @@ namespace TvdP.Collections
         public Cache()
             : this(EqualityComparer<TKey>.Default)
         { }
+
+#if !SILVERLIGHT
+        Cache(SerializationInfo serializationInfo, StreamingContext streamingContext)
+        {
+            _keyComparer = (IEqualityComparer<TKey>)serializationInfo.GetValue("Comparer", typeof(IEqualityComparer<TKey>));
+            _Level1Cache = new Level1CacheClass<TKey>(_keyComparer);
+            _Level2Cache = new WeakDictionary<object, bool, object>(new ObjectComparerClass<TKey> { _KeyComparer = _keyComparer }, EqualityComparer<bool>.Default);
+
+            foreach (var kvp in (IEnumerable<KeyValuePair<TKey, TValue>>)serializationInfo.GetValue("Items", typeof(List<KeyValuePair<TKey, TValue>>)))
+                this.GetOldest(kvp.Key, kvp.Value);
+        }
+
+        #region ISerializable Members
+
+        [SecurityCritical]
+        void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue("Comparer", this._keyComparer);
+            info.AddValue("Level2", _Level1Cache.Select(kvp => new KeyValuePair<TKey, TValue>( kvp.Key, (TValue)kvp.Value._Item ) ).ToList() );
+        }
+        #endregion
+#endif
 
         /// <summary>
         /// Try to retrieve an item from the cache
@@ -214,7 +191,7 @@ namespace TvdP.Collections
             if (!found)
             {
                 var keyAsObject = (object)key;
-                if (keyAsObject != null && _Level2Cache.TryGetValue(keyAsObject, out storedItem))
+                if (keyAsObject != null && _Level2Cache.TryGetValue(keyAsObject, false, out storedItem))
                 {
                     found = true;
                     _Level1Cache.GetOldestItem(key, ref storedItem);
@@ -243,7 +220,7 @@ namespace TvdP.Collections
 
             var keyAsObject = (object)key;
             if (keyAsObject != null)
-                item = _Level2Cache.GetOldest(keyAsObject, item);                   
+                item = _Level2Cache.GetOrAdd(keyAsObject,false, item);                   
 
             _Level1Cache.GetOldestItem(key, ref item);
             
@@ -256,19 +233,8 @@ namespace TvdP.Collections
         /// </summary>
         public void Clear()
         {
-            _Level2Cache.Clear();
+            ((ICollection<KeyValuePair<Tuple<TKey,bool>,TValue>>)_Level2Cache).Clear();
             _Level1Cache.Clear();
         }
-
-#if !SILVERLIGHT
-        #region IDeserializationCallback Members
-
-        void IDeserializationCallback.OnDeserialization(object sender)
-        {
-            _Level1Cache = new Level1CacheClass<TKey>(((ObjectComparerClass<TKey>)_Level2Cache.Comparer)._KeyComparer);
-        }
-
-        #endregion
-#endif
     }
 }

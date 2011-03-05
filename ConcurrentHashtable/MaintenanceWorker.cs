@@ -19,7 +19,7 @@ namespace TvdP.Collections
     /// Helper class for ConcurrentWeakHashtable. Makes sure that its DoMaintenance method
     /// gets called when the GarbageCollector has collected garbage.
     /// </summary>
-    internal static class ConcurrentWeakHashtableHelper
+    internal static class MaintenanceWorker
     {
         #region Garbage Collection tracking
 
@@ -32,7 +32,7 @@ namespace TvdP.Collections
             //empty head may remain.. not bad.
             var pos = _TableList;
 
-            if(pos != null)
+            if (pos != null)
                 while (true)
                 {
                     var next = pos.Next;
@@ -93,8 +93,6 @@ namespace TvdP.Collections
                         {
                             try
                             {
-                                Queue<IMaintainable> delayedQueue = null;
-
                                 var pos = _TableList;
 
                                 while (pos != null)
@@ -102,35 +100,9 @@ namespace TvdP.Collections
                                     var target = (IMaintainable)pos.Target;
 
                                     if (target != null)
-                                    {
-                                        if (!target.DoMaintenance())
-                                        {
-                                            if (delayedQueue == null)
-                                                delayedQueue = new Queue<IMaintainable>();
-
-                                            delayedQueue.Enqueue(target);
-                                        }
-                                    }
+                                        target.DoMaintenance();
 
                                     pos = pos.Next;
-                                }
-
-                                if (delayedQueue != null)
-                                {
-                                    int sleepCounter = delayedQueue.Count;
-                                    while (delayedQueue.Count > 0)
-                                    {
-                                        if (sleepCounter-- == 0)
-                                        {
-                                            Thread.Sleep(0);
-                                            sleepCounter = delayedQueue.Count;
-                                        }
-
-                                        var target = delayedQueue.Dequeue();
-
-                                        if (!target.DoMaintenance())
-                                            delayedQueue.Enqueue(target);
-                                    }
                                 }
                             }
                             finally
@@ -145,18 +117,17 @@ namespace TvdP.Collections
                 thread.Priority = ThreadPriority.Highest;
 #endif
                 thread.Start();
-                
+
             }
         }
 
         #endregion
 
-
         #region maintaining Tables list
 
-        sealed class ListNode 
+        sealed class ListNode
         {
-            public ListNode(object target) 
+            public ListNode(object target)
             { _Reference = new WeakReference(target); }
 
             WeakReference _Reference;
@@ -169,7 +140,7 @@ namespace TvdP.Collections
         /// <summary>
         /// a list of all WeakHashtables
         /// </summary>
-        static ListNode _TableList ;
+        static ListNode _TableList;
 
         /// <summary>
         /// this is to be called from the constructor or initializer of a ConcurrentWeakHashtable instance

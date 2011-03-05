@@ -23,14 +23,6 @@ namespace TvdP.Collections
     /// <typeparam name="TSearch">Type of the key to search with.</typeparam>
     public abstract class ConcurrentHashtable<TStored, TSearch>
     {
-#if !SILVERLIGHT
-        static ConcurrentHashtable()
-        {
-            //Make sure diagnostics get initialized
-            Diagnostics.JustToWakeUp();
-        }
-#endif
-
         /// <summary>
         /// Constructor (protected)
         /// </summary>
@@ -253,6 +245,38 @@ namespace TvdP.Collections
             finally
             { segment.ReleaseForWriting(); }
         }
+
+        /// <summary>
+        /// Replaces and existing item
+        /// </summary>
+        /// <param name="newItem"></param>
+        /// <param name="oldItem"></param>
+        /// <param name="sanction"></param>
+        /// <returns>true is the existing item was successfully replaced.</returns>
+        protected bool ReplaceItem(ref TSearch searchKey, ref TStored newItem, out TStored oldItem, Func<TStored,bool> sanction)
+        {
+            var segment = GetSegmentLockedForWriting(this.GetItemHashCode(ref newItem));
+
+            try
+            {
+                TStored dummy;
+
+                if (!segment.InsertItem(ref newItem, out oldItem, this))
+                {
+                    segment.RemoveItem(ref searchKey, out dummy, this);
+                    return false;
+                }
+
+                if (sanction(oldItem))
+                    return true;
+
+                segment.InsertItem(ref oldItem, out dummy, this);
+                return false;
+            }
+            finally
+            { segment.ReleaseForWriting(); }
+        }
+
 
         /// <summary>
         /// Inserts an item in the table contents possibly replacing an existing item.
@@ -685,82 +709,8 @@ namespace TvdP.Collections
                     }
                 }
             }
-
-#if !SILVERLIGHT
-            CheckBadHash(largestSegment, totalNewSegmentSize / newSegmentCount, largestSegmentSize); 
-#endif
         }
 
-#if !SILVERLIGHT
-        class HasCountClass
-        {
-            public TStored _Item;
-            public int _Count;
-        }
-
-        /// <summary>
-        /// Check for bad hash. If after resize there exists a segment with 64 times more elements than average this 
-        /// is very likely due to a bad hash. Report once for every table type.
-        /// </summary>
-        /// <param name="largestSegment"></param>
-        /// <param name="averageSegmentSize"></param>
-        /// <param name="largestSegmentSize"></param>
-        private void CheckBadHash(Segment<TStored, TSearch> largestSegment, int averageSegmentSize, int largestSegmentSize)
-        {
-            if( 
-                Diagnostics.ConcurrentHashtableSwitch.TraceWarning 
-                && largestSegment != null 
-                && averageSegmentSize * 64 < largestSegmentSize 
-                && !Diagnostics.TypeBadHashReportMap.ContainsKey(GetType())
-            )
-            {
-                largestSegment.LockForReading();
-
-                try
-                {
-                    if (largestSegment.IsAlive)
-                    {
-                        var mostRegularHashMasp = new Dictionary<uint, HasCountClass>();
-                        TStored storedItem;
-
-                        for (int i = -1; (i = largestSegment.GetNextItem(i, out storedItem, this)) >= 0; )
-                        {
-                            var hash = this.GetItemHashCode(ref storedItem);
-
-                            HasCountClass hc;
-
-                            if (mostRegularHashMasp.TryGetValue(hash, out hc))
-                                ++hc._Count;
-                            else
-                                mostRegularHashMasp.Add(hash, new HasCountClass { _Count= 1, _Item = storedItem });
-                        }
-
-                        var mostRepeatedHash = default(KeyValuePair<uint,HasCountClass>) ;
-
-                        foreach (var kvp in mostRegularHashMasp)
-                            if (mostRepeatedHash.Value == null || mostRepeatedHash.Value._Count < kvp.Value._Count)
-                                mostRepeatedHash = kvp;
-
-                        if (mostRepeatedHash.Value != null)
-                        {
-                            var keyType = GetKeyType(ref mostRepeatedHash.Value._Item);
-
-                            Trace.TraceWarning(
-                                "Segment contains 64 times more elements than average. This is probably caused by a bad hash.\n TableType:{0}\n Repeat count most often repeated hash:{1}\n Actual type of first key with most often repeated hash:{2}", 
-                                GetType().FullName, 
-                                mostRepeatedHash.Value._Count,
-                                keyType == null ? "<null>" : keyType.FullName
-                            );
-                        }
-
-                        Diagnostics.TypeBadHashReportMap[GetType()] = true;
-                    }
-                }
-                finally
-                { largestSegment.ReleaseForReading(); }
-            }
-        }
-#endif
         #endregion
     }
 }

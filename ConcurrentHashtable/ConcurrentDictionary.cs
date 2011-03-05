@@ -13,6 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
+using System.Collections;
 
 namespace TvdP.Collections
 {
@@ -57,10 +58,9 @@ namespace TvdP.Collections
 #if !SILVERLIGHT
     [Serializable]
 #endif
-    public sealed class ConcurrentDictionary<TKey, TValue> 
-        : ConcurrentHashtable<KeyValuePair<TKey, TValue>?
-            , ConcurrentDictionaryKey<TKey, TValue>>
-            , IDictionary<TKey, TValue>
+    public class ConcurrentDictionary<TKey, TValue> 
+        : ConcurrentHashtable<KeyValuePair<TKey, TValue>?, ConcurrentDictionaryKey<TKey, TValue>>
+            , IDictionary<TKey, TValue>, IDictionary
 #if !SILVERLIGHT
             , ISerializable 
 #endif
@@ -184,8 +184,8 @@ namespace TvdP.Collections
         /// <param name="key">The object to use as the key of the element to add.</param>
         /// <param name="value">The object to use as the value of the element to add.</param>
         /// <exception cref="ArgumentException">An element with the same key already exists in the dictionary.</exception>
-        public void Add(TKey key, TValue value)
-        { Add( new KeyValuePair<TKey,TValue>(key,value) ); }
+        void IDictionary<TKey,TValue>.Add(TKey key, TValue value)
+        { ((ICollection<KeyValuePair<TKey,TValue>>)this).Add( new KeyValuePair<TKey,TValue>(key,value) ); }
 
         /// <summary>
         /// Determines whether the dictionary
@@ -222,7 +222,7 @@ namespace TvdP.Collections
         /// <param name="key">The key of the element to remove.</param>
         /// <returns>true if the element is successfully removed; otherwise, false. This method
         /// also returns false if key was not found in the original dictionary.</returns>
-        public bool Remove(TKey key)
+        bool IDictionary<TKey,TValue>.Remove(TKey key)
         {
             KeyValuePair<TKey, TValue>? oldItem;
             ConcurrentDictionaryKey<TKey,TValue> searchKey = new ConcurrentDictionaryKey<TKey,TValue>(key);
@@ -306,6 +306,80 @@ namespace TvdP.Collections
 
         #endregion
 
+        #region IDictionary Members
+
+        void IDictionary.Add(object key, object value)
+        { ((IDictionary<TKey, TValue>)this).Add((TKey)key, (TValue)value); }
+
+        void IDictionary.Clear()
+        { ((IDictionary<TKey, TValue>)this).Clear(); }
+
+        bool IDictionary.Contains(object key)
+        { return ((IDictionary<TKey, TValue>)this).ContainsKey((TKey)key); }
+
+        class DictionaryEnumerator : IDictionaryEnumerator
+        {
+            public IEnumerator<KeyValuePair<TKey, TValue>> _source;
+
+            #region IDictionaryEnumerator Members
+
+            DictionaryEntry IDictionaryEnumerator.Entry
+            {
+                get
+                {
+                    var current = _source.Current;
+                    return new DictionaryEntry(current.Key, current.Value);
+                }
+            }
+
+            object IDictionaryEnumerator.Key
+            { get { return _source.Current.Key; } }
+
+            object IDictionaryEnumerator.Value
+            { get { return _source.Current.Value; } }
+
+            #endregion
+
+            #region IEnumerator Members
+
+            object IEnumerator.Current
+            { get { return ((IDictionaryEnumerator)this).Entry; } }
+
+            bool IEnumerator.MoveNext()
+            { return _source.MoveNext(); }
+
+            void IEnumerator.Reset()
+            { _source.Reset(); }
+
+            #endregion
+        }
+
+        IDictionaryEnumerator IDictionary.GetEnumerator()
+        { return new DictionaryEnumerator { _source = ((IDictionary<TKey, TValue>)this).GetEnumerator() }; }
+
+        bool IDictionary.IsFixedSize
+        { get { return false; } }
+
+        bool IDictionary.IsReadOnly
+        { get { return false; } }
+
+        ICollection IDictionary.Keys
+        { get { return (ICollection)((IDictionary<TKey, TValue>)this).Keys; } }
+
+        void IDictionary.Remove(object key)
+        { ((IDictionary<TKey, TValue>)this).Remove((TKey)key); }
+
+        ICollection IDictionary.Values
+        { get { return (ICollection)((IDictionary<TKey, TValue>)this).Values; } }
+
+        object IDictionary.this[object key]
+        {
+            get { return ((IDictionary<TKey, TValue>)this)[(TKey)key]; }
+            set { ((IDictionary<TKey, TValue>)this)[(TKey)key] = (TValue)value; }
+        }
+
+        #endregion
+
         #region ICollection<KeyValuePair<TKey,TValue>> Members
 
         /// <summary>
@@ -313,7 +387,7 @@ namespace TvdP.Collections
         /// </summary>
         /// <param name="item">A <see cref="KeyValuePair{TKey,TValue}"/> that represents the association to add.</param>
         /// <exception cref="ArgumentException">An association with an equal key already exists in the dicitonary.</exception>
-        public void Add(KeyValuePair<TKey, TValue> item)
+        void ICollection<KeyValuePair<TKey,TValue>>.Add(KeyValuePair<TKey, TValue> item)
         {
             KeyValuePair<TKey, TValue>? newItem = item;
             KeyValuePair<TKey, TValue>? presentItem;
@@ -337,7 +411,7 @@ namespace TvdP.Collections
         /// <remarks>
         /// This method compares both key and value. It uses the default equality comparer to compare values.
         /// </remarks>
-        public bool Contains(KeyValuePair<TKey, TValue> item)
+        bool ICollection<KeyValuePair<TKey,TValue>>.Contains(KeyValuePair<TKey, TValue> item)
         {
             KeyValuePair<TKey, TValue>? presentItem;
             ConcurrentDictionaryKey<TKey, TValue> searchKey = new ConcurrentDictionaryKey<TKey, TValue>(item.Key,item.Value);
@@ -360,7 +434,7 @@ namespace TvdP.Collections
         /// <exception cref="ArgumentException">The number of associations to be copied
         /// is greater than the available space from <paramref name="arrayIndex"/> to the end of the destination
         /// <paramref name="array"/>.</exception>
-        public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
+        void ICollection<KeyValuePair<TKey,TValue>>.CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
         {
             lock (SyncRoot)
                 Items.Select(nkvp => nkvp.Value).ToList().CopyTo(array, arrayIndex);
@@ -375,7 +449,7 @@ namespace TvdP.Collections
         /// <summary>
         /// Gets a value indicating whether the <see cref="ConcurrentDictionaryKey{TKey,TValue}"/> is read-only, which is always false.
         /// </summary>
-        public bool IsReadOnly
+        bool ICollection<KeyValuePair<TKey, TValue>>.IsReadOnly
         { get { return false; } }
 
         /// <summary>
@@ -386,12 +460,28 @@ namespace TvdP.Collections
         /// otherwise, false. This method also returns false if the association is not found in
         /// the original <see cref="ConcurrentDictionaryKey{TKey,TValue}"/>.
         ///</returns>
-        public bool Remove(KeyValuePair<TKey, TValue> item)
+        bool ICollection<KeyValuePair<TKey,TValue>>.Remove(KeyValuePair<TKey, TValue> item)
         {
             KeyValuePair<TKey, TValue>? oldItem;
             ConcurrentDictionaryKey<TKey, TValue> searchKey = new ConcurrentDictionaryKey<TKey, TValue>(item.Key,item.Value);
             return base.RemoveItem(ref searchKey, out oldItem);
         }
+
+        #endregion
+
+        #region ICollection Members
+
+        void ICollection.CopyTo(Array array, int index)
+        { ((ICollection<KeyValuePair<TKey, TValue>>)this).CopyTo((KeyValuePair<TKey, TValue>[])array, index); }
+
+        int ICollection.Count
+        { get { return ((ICollection<KeyValuePair<TKey, TValue>>)this).Count; } }
+
+        bool ICollection.IsSynchronized
+        { get { return true; } }
+
+        object ICollection.SyncRoot
+        { get { return this; } }
 
         #endregion
 
@@ -432,5 +522,114 @@ namespace TvdP.Collections
         #endregion
 #endif
 
+        public TValue AddOrUpdate(TKey key, Func<TKey, TValue> addValueFactory, Func<TKey, TValue, TValue> updateValueFactory)
+        {
+            if (null == addValueFactory)
+                throw new ArgumentNullException("addValueFactory");
+
+            if (null == updateValueFactory)
+                throw new ArgumentNullException("updateValueFactory");
+
+            var searchKey = new ConcurrentDictionaryKey<TKey, TValue>(key);
+            KeyValuePair<TKey, TValue>? latestItem;
+
+            while (true)
+                if (this.FindItem(ref searchKey, out latestItem))
+                {
+                    TValue storedValue = latestItem.Value.Value;
+                    TValue newValue = updateValueFactory(key, storedValue);
+
+                    if (TryUpdate(key, newValue, storedValue))
+                        return newValue;
+                }
+                else
+                    return AddOrUpdate(key, addValueFactory(key), updateValueFactory);
+        }
+
+        public TValue AddOrUpdate(TKey key, TValue addValue, Func<TKey, TValue, TValue> updateValueFactory)
+        {
+            if (null == updateValueFactory)
+                throw new ArgumentNullException("updateValueFactory");
+
+            KeyValuePair<TKey, TValue>? latestItem;
+            KeyValuePair<TKey, TValue>? addItem = new KeyValuePair<TKey, TValue>(key, addValue);
+
+            while(true)
+                if (this.GetOldestItem(ref addItem, out latestItem))
+                {
+                    TValue storedValue = latestItem.Value.Value;
+                    TValue newValue = updateValueFactory(key, storedValue);
+
+                    if (TryUpdate(key, newValue, storedValue))
+                        return newValue;
+                }
+                else
+                    return latestItem.Value.Value;
+        }
+
+        public bool TryAdd(TKey key, TValue value)
+        {
+            KeyValuePair<TKey,TValue>? addKey = new KeyValuePair<TKey,TValue>(key, value);
+            KeyValuePair<TKey,TValue>? oldItem;
+
+            return !this.GetOldestItem(ref addKey, out oldItem);
+        }
+
+        public bool TryRemove(TKey key, out TValue value)
+        {
+            var searchKey = new ConcurrentDictionaryKey<TKey,TValue>(key);
+            KeyValuePair<TKey,TValue>? oldItem;
+
+            var res = base.RemoveItem(ref searchKey, out oldItem);
+
+            value = res ? oldItem.Value.Value : default(TValue);
+
+            return res;
+        }
+
+        public bool TryUpdate(
+            TKey key,
+            TValue newValue,
+            TValue comparisonValue
+        )
+        {
+            var searchKey = new ConcurrentDictionaryKey<TKey, TValue>(key);
+            KeyValuePair<TKey, TValue>? newItem = new KeyValuePair<TKey, TValue>(key, newValue);
+            KeyValuePair<TKey, TValue>? dummy;
+
+            return base.ReplaceItem(ref searchKey, ref newItem, out dummy, item => EqualityComparer<TValue>.Default.Equals(item.Value.Value, comparisonValue));
+        }
+
+        public TValue GetOrAdd(
+            TKey key,
+            TValue value
+        )
+        {
+            KeyValuePair<TKey, TValue>? newItem = new KeyValuePair<TKey, TValue>(key, value);
+            KeyValuePair<TKey, TValue>? oldItem;
+
+            return base.GetOldestItem(ref newItem, out oldItem) ? oldItem.Value.Value : value;
+        }
+
+        public TValue GetOrAdd(
+            TKey key,
+            Func<TKey, TValue> valueFactory
+        )
+        {
+            if (null == valueFactory)
+                throw new ArgumentNullException("valueFactory");
+
+            var searchKey = new ConcurrentDictionaryKey<TKey, TValue>(key);
+            KeyValuePair<TKey, TValue>? oldItem;
+
+            if (base.FindItem(ref searchKey, out oldItem))
+                return oldItem.Value.Value;
+
+            KeyValuePair<TKey, TValue>? newItem = new KeyValuePair<TKey, TValue>(key, valueFactory(key));
+
+            base.GetOldestItem(ref newItem, out oldItem);
+
+            return oldItem.Value.Value;
+        }
     }
 }
