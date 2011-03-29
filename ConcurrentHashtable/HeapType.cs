@@ -13,6 +13,13 @@ using System.Text;
 
 namespace TvdP.Collections
 {
+    internal struct HeapType<T1>
+    {
+        public T1 Item1;
+
+        public Tuple<T1> AsTuple()
+        { return Tuple.Create(Item1); }
+    }
     internal struct HeapType<T1, T2>
     {
         public T1 Item1;
@@ -88,6 +95,9 @@ namespace TvdP.Collections
 
             return new HeapType<T1, T2, T3, T4, T5> { Item1 = key.Item1, Item2 = key.Item2, Item3 = key.Item3, Item4 = key.Item4, Item5 = key.Item5 };
         }
+
+        public static HeapType<T1> Create<T1>(T1 t1)
+        { return new HeapType<T1> { Item1 = t1 }; }
 
         public static HeapType<T1, T2> Create<T1, T2>(T1 t1, T2 t2)
         { return new HeapType<T1, T2> { Item1 = t1, Item2 = t2 }; }
