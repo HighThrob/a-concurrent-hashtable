@@ -70,7 +70,7 @@ namespace TvdP.Collections
         }
 
         IDictionaryEnumerator IDictionary.GetEnumerator()
-        { return new DictionaryEnumerator { _source = ((IDictionary<EK, EV>)this).GetEnumerator() }; }
+        { return new DictionaryEnumerator { _source = ((IEnumerable<KeyValuePair<EK, EV>>)this).GetEnumerator() }; }
 
         bool IDictionary.IsFixedSize
         { get { return false; } }
@@ -174,7 +174,7 @@ namespace TvdP.Collections
         #region IEnumerable<KeyValuePair<EK,EV>> Members
 
         IEnumerator<KeyValuePair<EK, EV>> IEnumerable<KeyValuePair<EK, EV>>.GetEnumerator()
-        { return InternalDictionary.GetEnumerator(); }
+        { return ((IEnumerable<KeyValuePair<EK, EV>>)InternalDictionary).GetEnumerator(); }
 
         #endregion
     }

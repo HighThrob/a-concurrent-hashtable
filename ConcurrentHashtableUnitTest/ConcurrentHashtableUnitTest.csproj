@@ -53,6 +53,7 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="InternalWeakDictionaryBaseTest.cs" />
     <Compile Include="KeySegmentComparerTest.cs" />
     <Compile Include="KeySegmentTest.cs" />
     <Compile Include="WeakDictionaryTest.cs" />

@@ -61,6 +61,9 @@ namespace TvdP.Collections
 
             protected override bool FromInternalKeyToExternalKey(Key<TWeakKey1, TWeakKey2, TWeakKey3, TWeakKey4, TStrongKey> internalKey, out Tuple<TWeakKey1, TWeakKey2, TWeakKey3, TWeakKey4, TStrongKey> externalKey)
             { return internalKey.Get(out externalKey); }
+
+            protected override bool FromInternalKeyToHeapKey(Key<TWeakKey1, TWeakKey2, TWeakKey3, TWeakKey4, TStrongKey> internalKey, out HeapType<TWeakKey1, TWeakKey2, TWeakKey3, TWeakKey4, TStrongKey> externalKey)
+            { return internalKey.Get(out externalKey); }
         }
 
         readonly InternalWeakDictionary _internalDictionary;
