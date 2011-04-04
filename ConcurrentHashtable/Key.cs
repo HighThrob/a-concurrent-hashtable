@@ -18,7 +18,7 @@ namespace TvdP.Collections
         bool IsGarbage { get; }
     };
 
-    internal struct WeakKey<E> : ITrashable, IEquatable<WeakKey<E>>
+    internal struct WeakKey<E> : ITrashable
         where E : class
     {
         public static object NullValue = new object();
@@ -50,32 +50,6 @@ namespace TvdP.Collections
             var obj = (object)value ?? NullValue;
             _elementReference = isWeak ? (object)(new WeakReference(obj)) : obj;
         }
-
-        #endregion
-
-        #region IEquatable<WeakKey<E>> Members
-
-        public bool Equals(WeakKey<E> other)
-        {
-            //assume weak
-            if (object.ReferenceEquals(_elementReference, other._elementReference))
-                return true;
-
-            var thisObj = ((WeakReference)this._elementReference).Target;
-            var otherObj = ((WeakReference)other._elementReference).Target;
-
-            if (thisObj == null || otherObj == null)
-                return false;
-
-            return EqualityComparer<E>.Default.Equals((E)thisObj, (E)otherObj);                
-        }
-
-        public override bool Equals(object obj)
-        {
-            return obj is WeakKey<E> && this.Equals((WeakKey<E>)obj);
-        }
-
-        //no relyable hashcode.
 
         #endregion
     }

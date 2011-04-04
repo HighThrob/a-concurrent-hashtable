@@ -17,12 +17,13 @@ using System.Collections.Concurrent;
 
 namespace TvdP.Collections
 {
-    internal abstract class InternalWeakDictionaryBase<IK, IV, EK, EV, HK> : ConcurrentDictionary<IK, IV>, IMaintainable, IDictionary<EK, EV>, ICollection<KeyValuePair<EK, EV>>, IEnumerable<KeyValuePair<EK, EV>>
+    internal abstract class InternalWeakDictionaryWeakValueBase<IK, IV, EK, EV, HK> : ConcurrentDictionary<IK, IV>, IMaintainable, IDictionary<EK, EV>, ICollection<KeyValuePair<EK, EV>>, IEnumerable<KeyValuePair<EK, EV>>
         where IK : ITrashable
-        where IV : ITrashable
+        where IV : IWeakValueRef<EV>, IEquatable<IV>
+        where EV : class
         where HK : struct
     {
-        protected InternalWeakDictionaryBase(int concurrencyLevel, int capacity, IEqualityComparer<IK> keyComparer)
+        protected InternalWeakDictionaryWeakValueBase(int concurrencyLevel, int capacity, IEqualityComparer<IK> keyComparer)
 #if SILVERLIGHT
             : base(keyComparer)
 #else
@@ -30,7 +31,7 @@ namespace TvdP.Collections
 #endif
         { MaintenanceWorker.Register(this); }
 
-        protected InternalWeakDictionaryBase(IEqualityComparer<IK> keyComparer)
+        protected InternalWeakDictionaryWeakValueBase(IEqualityComparer<IK> keyComparer)
             : base(keyComparer)
         { MaintenanceWorker.Register(this); }
 
@@ -41,13 +42,15 @@ namespace TvdP.Collections
         protected abstract bool FromInternalKeyToExternalKey(IK internalKey, out EK externalKey);
         protected abstract bool FromInternalKeyToHeapKey(IK internalKey, out HK externalKey);
         protected abstract IV FromExternalValueToInternalValue(EV externalValue);
-        protected abstract bool FromInternalValueToExternalValue(IV internalValue, out EV externalValue);
+
+        bool FromInternalValueToExternalValue(IV internalValue, out EV externalValue)
+        { return internalValue.GetValue(out externalValue); }
 
         #region IMaintainable Members
 
         void IMaintainable.DoMaintenance()
         {
-            foreach (var kvp in (IEnumerable<KeyValuePair<IK,IV>>)this)
+            foreach (var kvp in (IEnumerable<KeyValuePair<IK, IV>>)this)
                 if (kvp.Key.IsGarbage || kvp.Value.IsGarbage)
                 {
                     IV value;
@@ -69,13 +72,7 @@ namespace TvdP.Collections
                     newItm,
                     (sKey, oldItm) =>
                     {
-                        EV oldValue;
-                        HK oldKey;
-
-                        if (
-                            FromInternalKeyToHeapKey(sKey, out oldKey)
-                            && FromInternalValueToExternalValue(oldItm, out oldValue)
-                        )
+                        if (!sKey.IsGarbage && !oldItm.IsGarbage)
                             return oldItm;
                         else
                         {
@@ -87,7 +84,7 @@ namespace TvdP.Collections
                 )
             ;
 
-            if (!object.ReferenceEquals(newItm, storedItm))
+            if (!object.ReferenceEquals(newItm.Reference, storedItm.Reference))
                 throw new ArgumentException();
         }
 
@@ -101,7 +98,11 @@ namespace TvdP.Collections
         { get { return new TransformedCollection<EK> { _source = ((IEnumerable<KeyValuePair<EK, EV>>)this).Select(kvp => kvp.Key) }; } }
 
         bool IDictionary<EK, EV>.Remove(EK key)
-        { return ((IDictionary<IK, IV>)this).Remove(FromExternalKeyToSearchKey(key)); }
+        {
+            IV itm;
+            bool res = this.TryRemove(FromExternalKeyToSearchKey(key), out itm);
+            return res && !itm.IsGarbage;
+        }
 
         bool IDictionary<EK, EV>.TryGetValue(EK key, out EV value)
         {
@@ -113,7 +114,7 @@ namespace TvdP.Collections
                     return true;
 
                 //boyscout
-                ((IDictionary<IK, IV>)this).Remove(new KeyValuePair<IK,IV>(searchKey,internalValue));
+                ((IDictionary<IK, IV>)this).Remove(new KeyValuePair<IK, IV>(searchKey, internalValue));
             }
 
             value = default(EV);
@@ -184,8 +185,8 @@ namespace TvdP.Collections
         }
 
         int ICollection<KeyValuePair<EK, EV>>.Count
-        { 
-            get 
+        {
+            get
             {
                 int ct = 0;
 
@@ -194,7 +195,7 @@ namespace TvdP.Collections
                         ++ct;
 
                 return ct;
-            } 
+            }
         }
 
         bool ICollection<KeyValuePair<EK, EV>>.IsReadOnly
@@ -268,17 +269,19 @@ namespace TvdP.Collections
                 = FromExternalValueToInternalValue(value);
         }
 
-        public bool IsEmpty
-        { get { return ((ICollection<KeyValuePair<EV, EK>>)this).Count == 0; } }
+        public new bool IsEmpty
+        { get { return !((ICollection<KeyValuePair<EV, EK>>)this).GetEnumerator().MoveNext(); } }
 
         public EV AddOrUpdate(HK key, Func<HK, EV> addValueFactory, Func<HK, EV, EV> updateValueFactory)
         {
-            EV hold = default(EV);
+            //variables to hold references to newly created values so they will remain alive
+            EV hold1 ;
+            EV hold2 ;
 
             FromInternalValueToExternalValue(
                 base.AddOrUpdate(
                     FromHeapKeyToStorageKey(key),
-                    sKey => FromExternalValueToInternalValue(hold = addValueFactory(key)),
+                    sKey => FromExternalValueToInternalValue(hold1 = addValueFactory(key)),
                     (sKey, oldItm) =>
                     {
                         EV oldValue;
@@ -293,25 +296,29 @@ namespace TvdP.Collections
                         else
                         {
                             //boyscout
-                            ((ICollection<KeyValuePair<IK, IV>>)this).Remove(new KeyValuePair<IK,IV>(sKey,oldItm));
+                            ((ICollection<KeyValuePair<IK, IV>>)this).Remove(new KeyValuePair<IK, IV>(sKey, oldItm));
                             newValue = addValueFactory(key);
                         }
 
-                        return FromExternalValueToInternalValue(newValue) ;
+                        return FromExternalValueToInternalValue(hold2 = newValue);
                     }
                 ),
-                out hold
+                out hold1
             );
 
 
-            return hold;
+            return hold1;
         }
 
         public EV AddOrUpdate(HK key, EV addValue, Func<HK, EV, EV> updateValueFactory)
         {
-            EV hold = default(EV);
-
             var newItm = FromExternalValueToInternalValue(addValue);
+            var internalKey = FromHeapKeyToStorageKey(key);
+
+            if (base.TryAdd(internalKey, newItm))
+                return addValue;
+
+            EV hold = default(EV);
 
             FromInternalValueToExternalValue(
                 base.AddOrUpdate(
@@ -326,7 +333,7 @@ namespace TvdP.Collections
                             FromInternalKeyToHeapKey(sKey, out oldKey)
                             && FromInternalValueToExternalValue(oldItm, out oldValue)
                         )
-                            return FromExternalValueToInternalValue(updateValueFactory(oldKey, oldValue));
+                            return FromExternalValueToInternalValue(hold = updateValueFactory(oldKey, oldValue));
                         else
                         {
                             //boyscout
@@ -344,35 +351,32 @@ namespace TvdP.Collections
 
         public EV GetOrAdd(HK key, EV value)
         {
-            EV hold = default(EV);
-
             var newItm = FromExternalValueToInternalValue(value);
+            var internalKey = FromHeapKeyToStorageKey(key);
+
+            EV hold;
+
+            if(FromInternalValueToExternalValue(base.GetOrAdd(internalKey, newItm), out hold)) 
+                return hold;
 
             FromInternalValueToExternalValue(
                 base.AddOrUpdate(
-                    FromHeapKeyToStorageKey(key),
+                    internalKey,
                     newItm,
                     (sKey, oldItm) =>
                     {
-                        EV oldValue;
-                        HK oldKey;
-
-                        if (
-                            FromInternalKeyToHeapKey(sKey, out oldKey)
-                            && FromInternalValueToExternalValue(oldItm, out oldValue)
-                        )
-                            return oldItm;
-                        else
+                        if (sKey.IsGarbage || oldItm.IsGarbage)
                         {
                             //boyscout
                             ((ICollection<KeyValuePair<IK, IV>>)this).Remove(new KeyValuePair<IK, IV>(sKey, oldItm));
                             return newItm;
                         }
+                        else
+                            return oldItm;
                     }
                 ),
                 out hold
             );
-
 
             return hold;
         }
@@ -384,11 +388,37 @@ namespace TvdP.Collections
             return this.TryGetValue(key, out hold) ? hold : GetOrAdd(key, valueFactory(key));
         }
 
-        public KeyValuePair<EK, EV>[] ToArray()
+        public new KeyValuePair<EK, EV>[] ToArray()
         { return ((IEnumerable<KeyValuePair<EK, EV>>)this).ToArray(); }
 
         public bool TryAdd(HK key, EV value)
-        { return base.TryAdd(FromHeapKeyToStorageKey(key), FromExternalValueToInternalValue(value)); }
+        { 
+            var newItm = FromExternalValueToInternalValue(value);
+            var internalKey = FromHeapKeyToStorageKey(key);
+
+            if (base.TryAdd(internalKey, newItm))
+                return true;
+
+            var storedItm =
+                base.AddOrUpdate(
+                    internalKey,
+                    newItm,
+                    (k, itm) => 
+                    {
+                        if (k.IsGarbage || itm.IsGarbage)
+                        {
+                            //boyscout
+                            ((ICollection<KeyValuePair<IK, IV>>)this).Remove(new KeyValuePair<IK, IV>(k, itm));
+                            return newItm;
+                        }
+                        else
+                            return itm;
+                    }
+                )
+            ;
+
+            return object.ReferenceEquals(storedItm.Reference, newItm.Reference);
+        }
 
         public bool TryRemove(HK key, out EV value)
         {
@@ -425,54 +455,24 @@ namespace TvdP.Collections
         }
     }
 
-
-    internal abstract class InternalWeakDictionaryWeakValueBase<IK, EK, EV, HK> : InternalWeakDictionaryBase<IK, WeakKey<EV>, EK, EV, HK>
+    internal abstract class InternalWeakDictionaryWeakValueBase<IK, EK, EV, HK> : InternalWeakDictionaryWeakValueBase<IK, WeakValueRef<EV>, EK, EV, HK>
         where IK : ITrashable
         where EV : class
         where HK : struct
     {
         protected InternalWeakDictionaryWeakValueBase(int concurrencyLevel, int capacity, IEqualityComparer<IK> keyComparer)
+#if SILVERLIGHT
+            : base(keyComparer)
+#else
             : base(concurrencyLevel, capacity, keyComparer)
-        { }
+#endif
+        { MaintenanceWorker.Register(this); }
 
         protected InternalWeakDictionaryWeakValueBase(IEqualityComparer<IK> keyComparer)
             : base(keyComparer)
-        { }
+        { MaintenanceWorker.Register(this); }
 
-        protected sealed override WeakKey<EV> FromExternalValueToInternalValue(EV externalValue)
-        {
-            var res = new WeakKey<EV>();
-            res.SetValue(externalValue, true);
-            return res;
-        }
-
-        protected sealed override bool FromInternalValueToExternalValue(WeakKey<EV> internalValue, out EV externalValue)
-        {
-            return internalValue.GetValue(out externalValue, true);
-        }
-    }
-
-    internal abstract class InternalWeakDictionaryStrongValueBase<IK, EK, EV, HK> : InternalWeakDictionaryBase<IK, StrongKey<EV>, EK, EV, HK>
-        where IK : ITrashable
-        where HK : struct
-    {
-        protected InternalWeakDictionaryStrongValueBase(int concurrencyLevel, int capacity, IEqualityComparer<IK> keyComparer)
-            : base(concurrencyLevel, capacity, keyComparer)
-        { }
-
-        protected InternalWeakDictionaryStrongValueBase(IEqualityComparer<IK> keyComparer)
-            : base(keyComparer)
-        { }
-
-        protected sealed override StrongKey<EV> FromExternalValueToInternalValue(EV externalValue)
-        {
-            return new StrongKey<EV>() { _element = externalValue };
-        }
-
-        protected sealed override bool FromInternalValueToExternalValue(StrongKey<EV> internalValue, out EV externalValue)
-        {
-            externalValue = internalValue._element;
-            return true;
-        }
+        protected override WeakValueRef<EV> FromExternalValueToInternalValue(EV externalValue)
+        { return WeakValueRef<EV>.Create( externalValue ); }
     }
 }

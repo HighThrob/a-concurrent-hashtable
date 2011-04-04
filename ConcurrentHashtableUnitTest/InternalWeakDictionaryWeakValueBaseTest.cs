@@ -12,7 +12,7 @@ namespace ConcurrentHashtableUnitTest
     ///to contain all InternalWeakDictionaryBaseTest Unit Tests
     ///</summary>
     [TestClass()]
-    public class InternalWeakDictionaryBaseTest
+    public class InternalWeakDictionaryWeakValueBaseTest
     {
 
 
@@ -76,6 +76,50 @@ namespace ConcurrentHashtableUnitTest
             #endregion
         }
 
+        class ValueTrashable : IWeakValueRef<Tuple<int,int>>, IEquatable<ValueTrashable>
+        {
+            public Tuple<int, int> Value;
+
+            public bool IsGarbage
+            { get; set; }
+
+            public override bool Equals(object obj)
+            { return Equals(obj as ValueTrashable); }
+
+            public override int GetHashCode()
+            {
+                return Value.Item1.GetHashCode();
+            }
+
+            #region IWeakValueRef<Tuple<int,int>> Members
+
+            public object Reference
+            { get { return this; } }
+
+            public bool GetValue(out Tuple<int, int> value)
+            {
+                if (this.IsGarbage)
+                {
+                    value = default(Tuple<int, int>);
+                    return false;
+                }
+
+                value = Value;
+                return true;
+            }
+
+            #endregion
+
+            #region IEquatable<ValueTrashable> Members
+
+            public bool Equals(ValueTrashable other)
+            {
+                return other != null && (IsGarbage || other.IsGarbage ? object.ReferenceEquals(this, other) : Value.Item1 == other.Value.Item1);
+            }
+
+            #endregion
+        }
+
         class TrashableComparer : IEqualityComparer<Trashable>
         {
             #region IEqualityComparer<Trashable> Members
@@ -92,14 +136,14 @@ namespace ConcurrentHashtableUnitTest
         static KeyValuePair<int, int> HT(int f, int s)
         { return new KeyValuePair<int, int>(f, s); }
 
-        class IWDT : InternalWeakDictionaryBase<Trashable, Trashable, Tuple<int, int>, Tuple<int, int>, KeyValuePair<int, int>>
+        class IWDT : InternalWeakDictionaryWeakValueBase<Trashable, ValueTrashable, Tuple<int, int>, Tuple<int, int>, KeyValuePair<int, int>>
         {
             public IWDT()
                 : base(new TrashableComparer())
             { }
 
             public IDictionary<Tuple<int, int>, Trashable> Keys = new Dictionary<Tuple<int, int>, Trashable>();
-            public IDictionary<Tuple<int, int>, Trashable> Values = new Dictionary<Tuple<int, int>, Trashable>();
+            public IDictionary<Tuple<int, int>, ValueTrashable> Values = new Dictionary<Tuple<int, int>, ValueTrashable>();
 
 
             protected override Trashable FromExternalKeyToSearchKey(Tuple<int, int> externalKey)
@@ -146,34 +190,17 @@ namespace ConcurrentHashtableUnitTest
                 return res;
             }
 
-            protected override Trashable FromExternalValueToInternalValue(Tuple<int, int> externalValue)
+            protected override ValueTrashable FromExternalValueToInternalValue(Tuple<int, int> externalValue)
             {
-                Trashable res;
+                ValueTrashable res;
 
                 if (!Values.TryGetValue(externalValue, out res))
-                    Values[externalValue] = res = new Trashable { Value = externalValue.Item1 };
+                    Values[externalValue] = res = new ValueTrashable { Value = externalValue };
 
                 return res;
             }
-
-            protected override bool FromInternalValueToExternalValue(Trashable internalValue, out Tuple<int, int> externalValue)
-            {
-                externalValue = System.Linq.Enumerable.First(Values, kvp => object.ReferenceEquals(kvp.Value, internalValue)).Key;
-                return !internalValue.IsGarbage;
-            }
         }
 
-
-
-        internal virtual InternalWeakDictionaryBase<IK, IV, EK, EV, HK> CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : ITrashable
-            where HK : struct
-        {
-            // TODO: Instantiate an appropriate concrete class.
-            InternalWeakDictionaryBase<IK, IV, EK, EV, HK> target = null;
-            return target;
-        }
 
         [TestMethod()]
         public void ContainsKeyTest()
@@ -382,15 +409,15 @@ namespace ConcurrentHashtableUnitTest
         public void AddTest()
         {
             IWDT iwdt = new IWDT();
-            var asCollecion = (ICollection<KeyValuePair<Tuple<int,int>, Tuple<int,int>>>)iwdt;
+            var asCollection = (ICollection<KeyValuePair<Tuple<int,int>, Tuple<int,int>>>)iwdt;
 
-            asCollecion.Add(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 1), Tuple.Create(4, 1)));
+            asCollection.Add(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 1), Tuple.Create(4, 1)));
 
             Assert.AreEqual(Tuple.Create(4, 1), iwdt.GetItem(HT(1, 2)));
 
             try
             {
-                asCollecion.Add(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 3), Tuple.Create(8, 1)));
+                asCollection.Add(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 3), Tuple.Create(8, 1)));
                 Assert.Fail();
             }
             catch (ArgumentException)
@@ -398,13 +425,13 @@ namespace ConcurrentHashtableUnitTest
 
             iwdt.Keys[Tuple.Create(1, 1)].IsGarbage = true;
 
-            asCollecion.Add(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 3), Tuple.Create(8, 1)));
+            asCollection.Add(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 3), Tuple.Create(8, 1)));
 
             Assert.AreEqual(Tuple.Create(8, 1), iwdt.GetItem(HT(1, 2)));
 
             iwdt.Values[Tuple.Create(8, 1)].IsGarbage = true;
 
-            asCollecion.Add(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 3), Tuple.Create(8, 3)));
+            asCollection.Add(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 3), Tuple.Create(8, 3)));
 
             Assert.AreEqual(Tuple.Create(8, 3), iwdt.GetItem(HT(1, 2)));
         }
@@ -416,7 +443,7 @@ namespace ConcurrentHashtableUnitTest
         public void ClearTest()
         {
             IWDT iwdt = new IWDT();
-            var asCollecion = (ICollection<KeyValuePair<Tuple<int,int>, Tuple<int,int>>>)iwdt;
+            var asCollection = (ICollection<KeyValuePair<Tuple<int,int>, Tuple<int,int>>>)iwdt;
 
             IEnumerable<KeyValuePair<Tuple<int, int>, Tuple<int, int>>> contents =
                 new KeyValuePair<Tuple<int, int>, Tuple<int, int>>[] {
@@ -428,7 +455,7 @@ namespace ConcurrentHashtableUnitTest
 
             iwdt.InsertContents(contents);
 
-            asCollecion.Clear();
+            asCollection.Clear();
 
             Assert.AreEqual(0, iwdt.Count);
         }
@@ -440,24 +467,24 @@ namespace ConcurrentHashtableUnitTest
         public void ContainsTest()
         {
             IWDT iwdt = new IWDT();
-            var asCollecion = (ICollection<KeyValuePair<Tuple<int, int>, Tuple<int, int>>>)iwdt;
+            var asCollection = (ICollection<KeyValuePair<Tuple<int, int>, Tuple<int, int>>>)iwdt;
 
-            Assert.IsFalse(asCollecion.Contains( new KeyValuePair<Tuple<int,int>,Tuple<int,int>>( Tuple.Create(1,2), Tuple.Create(2,1) ) ) );
+            Assert.IsFalse(asCollection.Contains( new KeyValuePair<Tuple<int,int>,Tuple<int,int>>( Tuple.Create(1,2), Tuple.Create(2,1) ) ) );
 
             iwdt.AddOrUpdate(HT(1, 1), Tuple.Create(2, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
             iwdt.AddOrUpdate(HT(2, 1), Tuple.Create(3, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
             iwdt.AddOrUpdate(HT(3, 1), Tuple.Create(4, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
 
-            Assert.IsTrue(asCollecion.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 2), Tuple.Create(2, 1))));
-            Assert.IsTrue(asCollecion.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(2, 2), Tuple.Create(3, 1))));
-            Assert.IsTrue(asCollecion.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(3, 2), Tuple.Create(4, 1))));
+            Assert.IsTrue(asCollection.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 2), Tuple.Create(2, 1))));
+            Assert.IsTrue(asCollection.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(2, 2), Tuple.Create(3, 1))));
+            Assert.IsTrue(asCollection.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(3, 2), Tuple.Create(4, 1))));
 
             iwdt.Keys[Tuple.Create(1, 1)].IsGarbage = true;
             iwdt.Values[Tuple.Create(4, 1)].IsGarbage = true;
 
-            Assert.IsFalse(asCollecion.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 2), Tuple.Create(2, 1))));
-            Assert.IsTrue(asCollecion.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(2, 2), Tuple.Create(3, 1))));
-            Assert.IsFalse(asCollecion.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(3, 2), Tuple.Create(4, 1))));
+            Assert.IsFalse(asCollection.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 2), Tuple.Create(2, 1))));
+            Assert.IsTrue(asCollection.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(2, 2), Tuple.Create(3, 1))));
+            Assert.IsFalse(asCollection.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(3, 2), Tuple.Create(4, 1))));
         }
 
         /// <summary>
@@ -467,7 +494,7 @@ namespace ConcurrentHashtableUnitTest
         public void CopyToTest()
         {
             IWDT iwdt = new IWDT();
-            var asCollecion = (ICollection<KeyValuePair<Tuple<int, int>, Tuple<int, int>>>)iwdt;
+            var asCollection = (ICollection<KeyValuePair<Tuple<int, int>, Tuple<int, int>>>)iwdt;
 
             iwdt.AddOrUpdate(HT(1, 1), Tuple.Create(2, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
             iwdt.AddOrUpdate(HT(2, 1), Tuple.Create(3, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
@@ -477,7 +504,7 @@ namespace ConcurrentHashtableUnitTest
 
             try
             {
-                asCollecion.CopyTo(array, 4);
+                asCollection.CopyTo(array, 4);
                 Assert.Fail();
             }
             catch (IndexOutOfRangeException)
@@ -485,7 +512,7 @@ namespace ConcurrentHashtableUnitTest
 
             try
             {
-                asCollecion.CopyTo(array, -1);
+                asCollection.CopyTo(array, -1);
                 Assert.Fail();
             }
             catch (IndexOutOfRangeException)
@@ -493,7 +520,7 @@ namespace ConcurrentHashtableUnitTest
 
             try
             {
-                asCollecion.CopyTo(null, 0);
+                asCollection.CopyTo(null, 0);
                 Assert.Fail();
             }
             catch (ArgumentNullException)
@@ -501,7 +528,7 @@ namespace ConcurrentHashtableUnitTest
 
             try
             {
-                asCollecion.CopyTo(array, 1);
+                asCollection.CopyTo(array, 1);
                 Assert.Fail();
             }
             catch (ArgumentException)
@@ -512,7 +539,7 @@ namespace ConcurrentHashtableUnitTest
 
             array = new KeyValuePair<Tuple<int, int>, Tuple<int, int>>[3];
 
-            asCollecion.CopyTo(array, 1);
+            asCollection.CopyTo(array, 1);
 
             Assert.AreEqual(default(KeyValuePair<Tuple<int, int>, Tuple<int, int>>), array[0]);
             Assert.AreEqual(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(2, 1), Tuple.Create(3, 1)), array[1]);
@@ -522,238 +549,238 @@ namespace ConcurrentHashtableUnitTest
         /// <summary>
         ///A test for System.Collections.Generic.ICollection<System.Collections.Generic.KeyValuePair<EK,EV>>.Remove
         ///</summary>
-        void RemoveTestHelper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : ITrashable
-            where HK : struct
-        {
-            ICollection<KeyValuePair<EK, EV>> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
-            KeyValuePair<EK, EV> item = new KeyValuePair<EK, EV>(); // TODO: Initialize to an appropriate value
-            bool expected = false; // TODO: Initialize to an appropriate value
-            bool actual;
-            actual = target.Remove(item);
-            Assert.AreEqual(expected, actual);
-            Assert.Inconclusive("Verify the correctness of this test method.");
-        }
-
         [TestMethod()]
-        [DeploymentItem("ConcurrentHashtable.dll")]
         public void RemoveTest()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call RemoveTestHelper<IK, IV, EK, EV, HK>() with appropriate type parame" +
-                    "ters.");
+            IWDT iwdt = new IWDT();
+            var asCollection = (ICollection<KeyValuePair<Tuple<int, int>, Tuple<int, int>>>)iwdt;
+
+            Assert.IsFalse(asCollection.Remove(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 2), Tuple.Create(2, 1))));
+
+            iwdt.AddOrUpdate(HT(1, 1), Tuple.Create(2, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(2, 1), Tuple.Create(3, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(3, 1), Tuple.Create(4, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+
+            Assert.IsTrue(asCollection.Remove(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 2), Tuple.Create(2, 2))));
+            Assert.IsFalse(asCollection.Remove(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 2), Tuple.Create(2, 2))));
+
+            Assert.IsFalse(asCollection.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 2), Tuple.Create(2, 2))));
+
+            iwdt.Keys[Tuple.Create(2, 1)].IsGarbage = true;
+            iwdt.Values[Tuple.Create(4, 1)].IsGarbage = true;
+
+            Assert.IsFalse(asCollection.Remove(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(2, 2), Tuple.Create(3, 2))));
+            Assert.IsFalse(asCollection.Remove(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(3, 2), Tuple.Create(4, 2))));
         }
 
         /// <summary>
         ///A test for System.Collections.Generic.IDictionary<EK,EV>.Add
         ///</summary>
-        void AddTest1Helper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : ITrashable
-            where HK : struct
-        {
-            IDictionary<EK, EV> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
-            EK key = default(EK); // TODO: Initialize to an appropriate value
-            EV value = default(EV); // TODO: Initialize to an appropriate value
-            target.Add(key, value);
-            Assert.Inconclusive("A method that does not return a value cannot be verified.");
-        }
-
         [TestMethod()]
-        [DeploymentItem("ConcurrentHashtable.dll")]
         public void AddTest1()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call AddTest1Helper<IK, IV, EK, EV, HK>() with appropriate type paramete" +
-                    "rs.");
+            IWDT iwdt = new IWDT();
+            var asDictionary = (IDictionary<Tuple<int, int>, Tuple<int, int>>)iwdt;
+
+            asDictionary.Add(Tuple.Create(1, 1), Tuple.Create(4, 1));
+
+            Assert.AreEqual(Tuple.Create(4, 1), iwdt.GetItem(HT(1, 2)));
+
+            try
+            {
+                asDictionary.Add(Tuple.Create(1, 3), Tuple.Create(8, 1));
+                Assert.Fail();
+            }
+            catch (ArgumentException)
+            { }
+
+            iwdt.Keys[Tuple.Create(1, 1)].IsGarbage = true;
+
+            asDictionary.Add(Tuple.Create(1, 3), Tuple.Create(8, 1));
+
+            Assert.AreEqual(Tuple.Create(8, 1), iwdt.GetItem(HT(1, 2)));
+
+            iwdt.Values[Tuple.Create(8, 1)].IsGarbage = true;
+
+            asDictionary.Add(Tuple.Create(1, 3), Tuple.Create(8, 3));
+
+            Assert.AreEqual(Tuple.Create(8, 3), iwdt.GetItem(HT(1, 2)));
         }
 
         /// <summary>
         ///A test for System.Collections.Generic.IDictionary<EK,EV>.ContainsKey
         ///</summary>
-        void ContainsKeyTest1Helper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : ITrashable
-            where HK : struct
-        {
-            IDictionary<EK, EV> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
-            EK key = default(EK); // TODO: Initialize to an appropriate value
-            bool expected = false; // TODO: Initialize to an appropriate value
-            bool actual;
-            actual = target.ContainsKey(key);
-            Assert.AreEqual(expected, actual);
-            Assert.Inconclusive("Verify the correctness of this test method.");
-        }
-
         [TestMethod()]
-        [DeploymentItem("ConcurrentHashtable.dll")]
         public void ContainsKeyTest1()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call ContainsKeyTest1Helper<IK, IV, EK, EV, HK>() with appropriate type " +
-                    "parameters.");
+            IWDT iwdt = new IWDT();
+            var asDictionary = (IDictionary<Tuple<int, int>, Tuple<int, int>>)iwdt;
+
+            Assert.IsFalse(asDictionary.ContainsKey(Tuple.Create(1, 2)));
+
+            iwdt.AddOrUpdate(HT(1, 1), Tuple.Create(2, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(2, 1), Tuple.Create(3, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(3, 1), Tuple.Create(4, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+
+            Assert.IsTrue(asDictionary.ContainsKey(Tuple.Create(1, 2)));
+            Assert.IsTrue(asDictionary.ContainsKey(Tuple.Create(2, 2)));
+            Assert.IsTrue(asDictionary.ContainsKey(Tuple.Create(3, 2)));
+
+            iwdt.Keys[Tuple.Create(1, 1)].IsGarbage = true;
+            iwdt.Values[Tuple.Create(4, 1)].IsGarbage = true;
+
+            Assert.IsFalse(asDictionary.ContainsKey(Tuple.Create(1, 2)));
+            Assert.IsTrue(asDictionary.ContainsKey(Tuple.Create(2, 2)));
+            Assert.IsFalse(asDictionary.ContainsKey(Tuple.Create(3, 2)));
         }
 
         /// <summary>
         ///A test for System.Collections.Generic.IDictionary<EK,EV>.Remove
         ///</summary>
-        void RemoveTest1Helper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : ITrashable
-            where HK : struct
-        {
-            IDictionary<EK, EV> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
-            EK key = default(EK); // TODO: Initialize to an appropriate value
-            bool expected = false; // TODO: Initialize to an appropriate value
-            bool actual;
-            actual = target.Remove(key);
-            Assert.AreEqual(expected, actual);
-            Assert.Inconclusive("Verify the correctness of this test method.");
-        }
-
         [TestMethod()]
-        [DeploymentItem("ConcurrentHashtable.dll")]
         public void RemoveTest1()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call RemoveTest1Helper<IK, IV, EK, EV, HK>() with appropriate type param" +
-                    "eters.");
+            IWDT iwdt = new IWDT();
+            var asDictionary = (IDictionary<Tuple<int, int>, Tuple<int, int>>)iwdt;
+
+            Assert.IsFalse(asDictionary.Remove(Tuple.Create(1, 2)));
+
+            iwdt.AddOrUpdate(HT(1, 1), Tuple.Create(2, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(2, 1), Tuple.Create(3, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(3, 1), Tuple.Create(4, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+
+            Assert.IsTrue(asDictionary.Remove(Tuple.Create(1, 2)));
+
+            Assert.IsFalse(asDictionary.ContainsKey(Tuple.Create(1, 2)));
+
+            iwdt.Keys[Tuple.Create(2, 1)].IsGarbage = true;
+            iwdt.Values[Tuple.Create(4, 1)].IsGarbage = true;
+
+            Assert.IsFalse(asDictionary.Remove(Tuple.Create(2, 2)));
+            Assert.IsFalse(asDictionary.Remove(Tuple.Create(3, 2)));
         }
 
         /// <summary>
         ///A test for System.Collections.Generic.IDictionary<EK,EV>.TryGetValue
         ///</summary>
-        void TryGetValueTestHelper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : ITrashable
-            where HK : struct
-        {
-            IDictionary<EK, EV> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
-            EK key = default(EK); // TODO: Initialize to an appropriate value
-            EV value = default(EV); // TODO: Initialize to an appropriate value
-            EV valueExpected = default(EV); // TODO: Initialize to an appropriate value
-            bool expected = false; // TODO: Initialize to an appropriate value
-            bool actual;
-            actual = target.TryGetValue(key, out value);
-            Assert.AreEqual(valueExpected, value);
-            Assert.AreEqual(expected, actual);
-            Assert.Inconclusive("Verify the correctness of this test method.");
-        }
-
         [TestMethod()]
-        [DeploymentItem("ConcurrentHashtable.dll")]
         public void TryGetValueTest()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call TryGetValueTestHelper<IK, IV, EK, EV, HK>() with appropriate type p" +
-                    "arameters.");
+            IWDT iwdt = new IWDT();
+
+            Tuple<int,int> value;
+
+            Assert.IsFalse(iwdt.TryGetValue(HT(1, 2), out value));
+
+            iwdt.AddOrUpdate(HT(1, 1), Tuple.Create(2, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(2, 1), Tuple.Create(3, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(3, 1), Tuple.Create(4, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+
+            Assert.IsTrue(iwdt.TryGetValue(HT(1, 2), out value));
+            Assert.AreEqual(Tuple.Create(2, 1), value);
+
+            Assert.IsTrue(iwdt.TryGetValue(HT(2, 2), out value));
+            Assert.AreEqual(Tuple.Create(3, 1), value);
+
+            Assert.IsTrue(iwdt.TryGetValue(HT(3, 2), out value));
+            Assert.AreEqual(Tuple.Create(4, 1), value);
+
+            iwdt.Keys[Tuple.Create(1, 1)].IsGarbage = true;
+            iwdt.Values[Tuple.Create(4, 1)].IsGarbage = true;
+
+            Assert.IsFalse(iwdt.TryGetValue(HT(1, 2), out value));
+            Assert.IsFalse(iwdt.TryGetValue(HT(3, 2), out value));
         }
 
         /// <summary>
         ///A test for ToArray
         ///</summary>
-        void ToArrayTestHelper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : ITrashable
-            where HK : struct
-        {
-            InternalWeakDictionaryBase<IK, IV, EK, EV, HK> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
-            KeyValuePair<EK, EV>[] expected = null; // TODO: Initialize to an appropriate value
-            KeyValuePair<EK, EV>[] actual;
-            actual = target.ToArray();
-            Assert.AreEqual(expected, actual);
-            Assert.Inconclusive("Verify the correctness of this test method.");
-        }
-
         [TestMethod()]
         public void ToArrayTest()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call ToArrayTestHelper<IK, IV, EK, EV, HK>() with appropriate type param" +
-                    "eters.");
+            IWDT iwdt = new IWDT();
+
+            Assert.AreEqual(0, iwdt.ToArray().Length);
+
+            iwdt.AddOrUpdate(HT(1, 1), Tuple.Create(2, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(2, 1), Tuple.Create(3, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(3, 1), Tuple.Create(4, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+
+            var array = iwdt.ToArray();
+
+            Assert.AreEqual(3, array.Length);
+
+            var list = System.Linq.Enumerable.ToList(array);
+
+            Assert.IsTrue(list.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(1, 1), Tuple.Create(2, 1))));
+            Assert.IsTrue(list.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(2, 1), Tuple.Create(3, 1))));
+            Assert.IsTrue(list.Contains(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(3, 1), Tuple.Create(4, 1))));
+
+            iwdt.Keys[Tuple.Create(1, 1)].IsGarbage = true;
+            iwdt.Values[Tuple.Create(4, 1)].IsGarbage = true;
+
+            array = iwdt.ToArray();
+
+            Assert.AreEqual(1, array.Length);
+
+            Assert.AreEqual(new KeyValuePair<Tuple<int, int>, Tuple<int, int>>(Tuple.Create(2, 1), Tuple.Create(3, 1)), array[0]);
         }
 
         /// <summary>
         ///A test for TryAdd
         ///</summary>
-        void TryAddTestHelper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : ITrashable
-            where HK : struct
-        {
-            InternalWeakDictionaryBase<IK, IV, EK, EV, HK> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
-            HK key = default(HK); // TODO: Initialize to an appropriate value
-            EV value = default(EV); // TODO: Initialize to an appropriate value
-            bool expected = false; // TODO: Initialize to an appropriate value
-            bool actual;
-            actual = target.TryAdd(key, value);
-            Assert.AreEqual(expected, actual);
-            Assert.Inconclusive("Verify the correctness of this test method.");
-        }
-
         [TestMethod()]
         public void TryAddTest()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call TryAddTestHelper<IK, IV, EK, EV, HK>() with appropriate type parame" +
-                    "ters.");
+            IWDT iwdt = new IWDT();
+
+            Assert.IsTrue(iwdt.TryAdd(HT(1, 1), Tuple.Create(4, 1)));
+
+            Assert.AreEqual(Tuple.Create(4, 1), iwdt.GetItem(HT(1, 2)));
+
+            Assert.IsFalse(iwdt.TryAdd(HT(1, 3), Tuple.Create(8, 1)));
+
+            iwdt.Keys[Tuple.Create(1, 1)].IsGarbage = true;
+
+            Assert.IsTrue(iwdt.TryAdd(HT(1, 3), Tuple.Create(8, 1)));
+
+            Assert.AreEqual(Tuple.Create(8, 1), iwdt.GetItem(HT(1, 2)));
+
+            iwdt.Values[Tuple.Create(8, 1)].IsGarbage = true;
+
+            Assert.IsTrue(iwdt.TryAdd(HT(1, 3), Tuple.Create(8, 3)));
+
+            Assert.AreEqual(Tuple.Create(8, 3), iwdt.GetItem(HT(1, 2)));
         }
 
-        /// <summary>
-        ///A test for TryGetValue
-        ///</summary>
-        void TryGetValueTest1Helper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : ITrashable
-            where HK : struct
-        {
-            InternalWeakDictionaryBase<IK, IV, EK, EV, HK> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
-            HK key = default(HK); // TODO: Initialize to an appropriate value
-            EV value = default(EV); // TODO: Initialize to an appropriate value
-            EV valueExpected = default(EV); // TODO: Initialize to an appropriate value
-            bool expected = false; // TODO: Initialize to an appropriate value
-            bool actual;
-            actual = target.TryGetValue(key, out value);
-            Assert.AreEqual(valueExpected, value);
-            Assert.AreEqual(expected, actual);
-            Assert.Inconclusive("Verify the correctness of this test method.");
-        }
-
-        [TestMethod()]
-        public void TryGetValueTest1()
-        {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call TryGetValueTest1Helper<IK, IV, EK, EV, HK>() with appropriate type " +
-                    "parameters.");
-        }
 
         /// <summary>
         ///A test for TryRemove
         ///</summary>
-        void TryRemoveTestHelper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : ITrashable
-            where HK : struct
-        {
-            InternalWeakDictionaryBase<IK, IV, EK, EV, HK> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
-            HK key = default(HK); // TODO: Initialize to an appropriate value
-            EV value = default(EV); // TODO: Initialize to an appropriate value
-            EV valueExpected = default(EV); // TODO: Initialize to an appropriate value
-            bool expected = false; // TODO: Initialize to an appropriate value
-            bool actual;
-            actual = target.TryRemove(key, out value);
-            Assert.AreEqual(valueExpected, value);
-            Assert.AreEqual(expected, actual);
-            Assert.Inconclusive("Verify the correctness of this test method.");
-        }
-
         [TestMethod()]
         public void TryRemoveTest()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call TryRemoveTestHelper<IK, IV, EK, EV, HK>() with appropriate type par" +
-                    "ameters.");
+            IWDT iwdt = new IWDT();
+            var asDictionary = (IDictionary<Tuple<int, int>, Tuple<int, int>>)iwdt;
+
+            Tuple<int, int> value;
+
+            Assert.IsFalse(iwdt.TryRemove(HT(1, 2), out value));
+
+            iwdt.AddOrUpdate(HT(1, 1), Tuple.Create(2, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(2, 1), Tuple.Create(3, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(3, 1), Tuple.Create(4, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+
+            Assert.IsTrue(iwdt.TryRemove(HT(1, 2), out value));
+            Assert.AreEqual(Tuple.Create(2, 1), value);
+
+            Assert.IsFalse(asDictionary.ContainsKey(Tuple.Create(1, 2)));
+
+            iwdt.Keys[Tuple.Create(2, 1)].IsGarbage = true;
+            iwdt.Values[Tuple.Create(4, 1)].IsGarbage = true;
+
+            Assert.IsFalse(iwdt.TryRemove(HT(2, 2), out value));
+            Assert.IsFalse(iwdt.TryRemove(HT(3, 2), out value));
         }
 
         /// <summary>
@@ -761,10 +788,11 @@ namespace ConcurrentHashtableUnitTest
         ///</summary>
         void TryUpdateTestHelper<IK, IV, EK, EV, HK>()
             where IK : ITrashable
-            where IV : ITrashable
+            where IV : IWeakValueRef<EV>, IEquatable<IV>
+            where EV : class
             where HK : struct
         {
-            InternalWeakDictionaryBase<IK, IV, EK, EV, HK> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
+            InternalWeakDictionaryWeakValueBase<IK, IV, EK, EV, HK> target = null;
             HK key = default(HK); // TODO: Initialize to an appropriate value
             EV newValue = default(EV); // TODO: Initialize to an appropriate value
             EV comparisonValue = default(EV); // TODO: Initialize to an appropriate value
@@ -778,31 +806,49 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod()]
         public void TryUpdateTest()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call TryUpdateTestHelper<IK, IV, EK, EV, HK>() with appropriate type par" +
-                    "ameters.");
+            var iwdt = new IWDT();
+
+            Assert.IsFalse(iwdt.TryUpdate(HT(1, 2), Tuple.Create(12, 1), Tuple.Create(2, 2)));
+
+            iwdt.AddOrUpdate(HT(1, 1), Tuple.Create(2, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(2, 1), Tuple.Create(3, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(3, 1), Tuple.Create(4, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+
+            Assert.IsTrue(iwdt.TryUpdate(HT(1, 2), Tuple.Create(12, 1), Tuple.Create(2, 2)));
+
+            Assert.AreEqual(Tuple.Create(12, 1), iwdt.GetItem(HT(1, 2)));
+
+            iwdt.Keys[Tuple.Create(2, 1)].IsGarbage = true;
+            iwdt.Values[Tuple.Create(4, 1)].IsGarbage = true;
+
+            Assert.IsFalse(iwdt.TryUpdate(HT(2, 2), Tuple.Create(13, 1), Tuple.Create(3, 2)));
+            Assert.IsFalse(iwdt.TryUpdate(HT(3, 2), Tuple.Create(14, 1), Tuple.Create(4, 2)));
         }
 
         /// <summary>
         ///A test for TvdP.Collections.IMaintainable.DoMaintenance
         ///</summary>
-        void DoMaintenanceTestHelper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : ITrashable
-            where HK : struct
-        {
-            IMaintainable target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
-            target.DoMaintenance();
-            Assert.Inconclusive("A method that does not return a value cannot be verified.");
-        }
-
         [TestMethod()]
-        [DeploymentItem("ConcurrentHashtable.dll")]
         public void DoMaintenanceTest()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call DoMaintenanceTestHelper<IK, IV, EK, EV, HK>() with appropriate type" +
-                    " parameters.");
+            var iwdt = new IWDT();
+
+            iwdt.AddOrUpdate(HT(1, 1), Tuple.Create(2, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(2, 1), Tuple.Create(3, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(3, 1), Tuple.Create(4, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+
+            iwdt.Keys[Tuple.Create(2, 1)].IsGarbage = true;
+            iwdt.Values[Tuple.Create(4, 1)].IsGarbage = true;
+
+            var asBaseDictionary = (IDictionary<Trashable, ValueTrashable>)iwdt;
+
+            Assert.AreEqual(3, asBaseDictionary.Count);
+
+            ((IMaintainable)iwdt).DoMaintenance();
+
+            Assert.AreEqual(1, asBaseDictionary.Count);
+
+            Assert.IsTrue(asBaseDictionary.Contains( new KeyValuePair<Trashable,ValueTrashable>(iwdt.Keys[Tuple.Create(1,1)], iwdt.Values[Tuple.Create(2,1)])));
         }
 
         /// <summary>
@@ -810,10 +856,11 @@ namespace ConcurrentHashtableUnitTest
         ///</summary>
         void IsEmptyTestHelper<IK, IV, EK, EV, HK>()
             where IK : ITrashable
-            where IV : ITrashable
+            where IV : IWeakValueRef<EV>, IEquatable<IV>
+            where EV : class
             where HK : struct
         {
-            InternalWeakDictionaryBase<IK, IV, EK, EV, HK> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
+            InternalWeakDictionaryWeakValueBase<IK, IV, EK, EV, HK> target = null;
             bool actual;
             actual = target.IsEmpty;
             Assert.Inconclusive("Verify the correctness of this test method.");
@@ -822,82 +869,105 @@ namespace ConcurrentHashtableUnitTest
         [TestMethod()]
         public void IsEmptyTest()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call IsEmptyTestHelper<IK, IV, EK, EV, HK>() with appropriate type param" +
-                    "eters.");
+            var iwdt = new IWDT();
+
+            Assert.IsTrue(iwdt.IsEmpty);
+
+            iwdt.AddOrUpdate(HT(2, 1), Tuple.Create(3, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+
+            Assert.IsFalse(iwdt.IsEmpty);
+
+            iwdt.AddOrUpdate(HT(3, 1), Tuple.Create(4, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+
+            Assert.IsFalse(iwdt.IsEmpty);
+
+            iwdt.Keys[Tuple.Create(2, 1)].IsGarbage = true;
+            iwdt.Values[Tuple.Create(4, 1)].IsGarbage = true;
+
+            Assert.IsTrue(iwdt.IsEmpty);        
         }
 
         /// <summary>
         ///A test for System.Collections.Generic.ICollection<System.Collections.Generic.KeyValuePair<EK,EV>>.Count
         ///</summary>
-        void CountTestHelper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : ITrashable
-            where HK : struct
-        {
-            ICollection<KeyValuePair<EK, EV>> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
-            int actual;
-            actual = target.Count;
-            Assert.Inconclusive("Verify the correctness of this test method.");
-        }
-
         [TestMethod()]
-        [DeploymentItem("ConcurrentHashtable.dll")]
         public void CountTest()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call CountTestHelper<IK, IV, EK, EV, HK>() with appropriate type paramet" +
-                    "ers.");
+            var iwdt = new IWDT();
+            var asCollection = (ICollection<KeyValuePair<Tuple<int, int>, Tuple<int, int>>>)iwdt;
+
+            Assert.AreEqual(0, asCollection.Count);
+
+            iwdt.AddOrUpdate(HT(2, 1), Tuple.Create(3, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+
+            Assert.AreEqual(1, asCollection.Count);
+
+            iwdt.AddOrUpdate(HT(3, 1), Tuple.Create(4, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+
+            Assert.AreEqual(2, asCollection.Count);
+
+            iwdt.Keys[Tuple.Create(2, 1)].IsGarbage = true;
+
+            Assert.AreEqual(1, asCollection.Count);
+
+            iwdt.Values[Tuple.Create(4, 1)].IsGarbage = true;
+
+            Assert.AreEqual(0, asCollection.Count);
         }
 
         /// <summary>
         ///A test for System.Collections.Generic.ICollection<System.Collections.Generic.KeyValuePair<EK,EV>>.IsReadOnly
         ///</summary>
-        void IsReadOnlyTestHelper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : ITrashable
-            where HK : struct
-        {
-            ICollection<KeyValuePair<EK, EV>> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
-            bool actual;
-            actual = target.IsReadOnly;
-            Assert.Inconclusive("Verify the correctness of this test method.");
-        }
-
         [TestMethod()]
-        [DeploymentItem("ConcurrentHashtable.dll")]
         public void IsReadOnlyTest()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call IsReadOnlyTestHelper<IK, IV, EK, EV, HK>() with appropriate type pa" +
-                    "rameters.");
+            var iwdt = new IWDT();
+            var asCollection = (ICollection<KeyValuePair<Tuple<int, int>, Tuple<int, int>>>)iwdt;
+            Assert.IsFalse(asCollection.IsReadOnly);
         }
 
         /// <summary>
         ///A test for System.Collections.Generic.IDictionary<EK,EV>.Item
         ///</summary>
-        void ItemTestHelper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : ITrashable
-            where HK : struct
-        {
-            IDictionary<EK, EV> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
-            EK key = default(EK); // TODO: Initialize to an appropriate value
-            EV expected = default(EV); // TODO: Initialize to an appropriate value
-            EV actual;
-            target[key] = expected;
-            actual = target[key];
-            Assert.AreEqual(expected, actual);
-            Assert.Inconclusive("Verify the correctness of this test method.");
-        }
-
         [TestMethod()]
-        [DeploymentItem("ConcurrentHashtable.dll")]
         public void ItemTest()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call ItemTestHelper<IK, IV, EK, EV, HK>() with appropriate type paramete" +
-                    "rs.");
+            var iwdt = new IWDT();
+            var asDictionary = (IDictionary<Tuple<int, int>, Tuple<int, int>>)iwdt;
+            Tuple<int, int> value;
+
+            try
+            {
+                value = asDictionary[Tuple.Create(1, 2)] ;
+                Assert.Fail();
+            }
+            catch (KeyNotFoundException)
+            {}
+
+            asDictionary[Tuple.Create(1, 1)] = Tuple.Create(2, 1);
+            asDictionary[Tuple.Create(2, 1)] = Tuple.Create(3, 1);
+
+            Assert.AreEqual(Tuple.Create(2, 1), asDictionary[Tuple.Create(1, 2)]);
+            Assert.AreEqual(Tuple.Create(3, 1), asDictionary[Tuple.Create(2, 2)]);
+
+            iwdt.Keys[Tuple.Create(1, 1)].IsGarbage = true;
+            iwdt.Values[Tuple.Create(3, 1)].IsGarbage = true;
+
+            try
+            {
+                value = asDictionary[Tuple.Create(1, 2)];
+                Assert.Fail();
+            }
+            catch (KeyNotFoundException)
+            { }
+
+            try
+            {
+                value = asDictionary[Tuple.Create(2, 2)];
+                Assert.Fail();
+            }
+            catch (KeyNotFoundException)
+            { }
         }
 
         /// <summary>
@@ -905,10 +975,11 @@ namespace ConcurrentHashtableUnitTest
         ///</summary>
         void KeysTestHelper<IK, IV, EK, EV, HK>()
             where IK : ITrashable
-            where IV : ITrashable
+            where IV : IWeakValueRef<EV>, IEquatable<IV>
+            where EV : class
             where HK : struct
         {
-            IDictionary<EK, EV> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
+            IDictionary<EK, EV> target = null;
             ICollection<EK> actual;
             actual = target.Keys;
             Assert.Inconclusive("Verify the correctness of this test method.");
@@ -918,32 +989,58 @@ namespace ConcurrentHashtableUnitTest
         [DeploymentItem("ConcurrentHashtable.dll")]
         public void KeysTest()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call KeysTestHelper<IK, IV, EK, EV, HK>() with appropriate type paramete" +
-                    "rs.");
+            IWDT iwdt = new IWDT();
+            var asDictionary = (IDictionary<Tuple<int, int>, Tuple<int, int>>)iwdt;
+
+            Assert.AreEqual(0, asDictionary.Keys.Count);
+
+            iwdt.AddOrUpdate(HT(1, 1), Tuple.Create(2, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(2, 1), Tuple.Create(3, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(3, 1), Tuple.Create(4, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+
+            var keys = asDictionary.Keys;
+
+            Assert.AreEqual(3, keys.Count);
+            Assert.IsTrue(keys.Contains(Tuple.Create(1, 1)));
+            Assert.IsTrue(keys.Contains(Tuple.Create(2, 1)));
+            Assert.IsTrue(keys.Contains(Tuple.Create(3, 1)));
+
+            iwdt.Keys[Tuple.Create(1, 1)].IsGarbage = true;
+            iwdt.Values[Tuple.Create(4, 1)].IsGarbage = true;
+
+            keys = asDictionary.Keys;
+
+            Assert.AreEqual(1, keys.Count);
+            Assert.IsTrue(keys.Contains(Tuple.Create(2, 1)));
         }
 
         /// <summary>
         ///A test for System.Collections.Generic.IDictionary<EK,EV>.Values
         ///</summary>
-        void ValuesTestHelper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : ITrashable
-            where HK : struct
-        {
-            IDictionary<EK, EV> target = CreateInternalWeakDictionaryBase<IK, IV, EK, EV, HK>(); // TODO: Initialize to an appropriate value
-            ICollection<EV> actual;
-            actual = target.Values;
-            Assert.Inconclusive("Verify the correctness of this test method.");
-        }
-
         [TestMethod()]
-        [DeploymentItem("ConcurrentHashtable.dll")]
         public void ValuesTest()
         {
-            Assert.Inconclusive("No appropriate type parameter is found to satisfies the type constraint(s) of IK." +
-                    " Please call ValuesTestHelper<IK, IV, EK, EV, HK>() with appropriate type parame" +
-                    "ters.");
+            IWDT iwdt = new IWDT();
+            var asDictionary = (IDictionary<Tuple<int, int>, Tuple<int, int>>)iwdt;
+
+            var values = asDictionary.Values;
+
+            Assert.AreEqual(0, values.Count);
+
+            iwdt.AddOrUpdate(HT(1, 1), Tuple.Create(2, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(2, 1), Tuple.Create(3, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+            iwdt.AddOrUpdate(HT(3, 1), Tuple.Create(4, 1), (k, v) => { throw new AssertFailedException(); return default(Tuple<int, int>); });
+
+            Assert.AreEqual(3, values.Count);
+            Assert.IsTrue(values.Contains(Tuple.Create(2, 1)));
+            Assert.IsTrue(values.Contains(Tuple.Create(3, 1)));
+            Assert.IsTrue(values.Contains(Tuple.Create(4, 1)));
+
+            iwdt.Keys[Tuple.Create(1, 1)].IsGarbage = true;
+            iwdt.Values[Tuple.Create(4, 1)].IsGarbage = true;
+
+            Assert.AreEqual(1, values.Count);
+            Assert.IsTrue(values.Contains(Tuple.Create(3, 1)));
         }
     }
 }

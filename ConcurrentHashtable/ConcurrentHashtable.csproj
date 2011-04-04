@@ -61,6 +61,7 @@
   <ItemGroup>
     <Compile Include="Cache.cs" />
     <Compile Include="HeapType.cs" />
+    <Compile Include="InternalWeakDictionaryStrongValueBase.cs" />
     <Compile Include="KeyComparer.cs" />
     <Compile Include="WeakKeyDictionary.4.cs" />
     <Compile Include="WeakKeyDictionary.3.cs" />
@@ -70,7 +71,7 @@
     <Compile Include="WeakKeyDictionary.1.cs" />
     <Compile Include="WeakValueDictionary.cs" />
     <Compile Include="WeakDictionary.2.cs" />
-    <Compile Include="InternalWeakDictionaryBase.cs" />
+    <Compile Include="InternalWeakDictionaryWeakValueBase.cs" />
     <Compile Include="IMaintainable.cs" />
     <Compile Include="Hasher.cs" />
     <Compile Include="Key.cs" />
@@ -80,6 +81,7 @@
     <Compile Include="TransformedCollection.cs" />
     <Compile Include="WeakDictionary.1.cs" />
     <Compile Include="DictionaryBase.cs" />
+    <Compile Include="WeakValueRef.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="dev.snk" />
