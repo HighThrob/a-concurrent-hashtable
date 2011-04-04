@@ -29,7 +29,7 @@ namespace TvdP.Collections
     {
         class InternalWeakDictionary :
             InternalWeakDictionaryWeakValueBase<
-                Key<TWeakKey1, TWeakKey2, TStrongKey>, 
+                Key<TWeakKey1, TWeakKey2, TStrongKey>,                 
                 Tuple<TWeakKey1, TWeakKey2, TStrongKey>, 
                 TValue, 
                 HeapType<TWeakKey1, TWeakKey2, TStrongKey>

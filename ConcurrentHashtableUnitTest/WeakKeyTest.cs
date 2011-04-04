@@ -64,56 +64,6 @@ namespace ConcurrentHashtableUnitTest
         #endregion
 
 
-        /// <summary>
-        ///A test for Equals
-        ///</summary>
-        public void EqualsTestHelper<E>(E a, E b)
-            where E : class
-        {
-            WeakKey<E> target = new WeakKey<E>() { _elementReference = new WeakReference(a) }; 
-            WeakKey<E> other = new WeakKey<E>() { _elementReference = new WeakReference(b) }; 
-            Assert.IsFalse(target.Equals(other));
-
-            other = new WeakKey<E> { _elementReference = new WeakReference(a) };
-            Assert.IsTrue(target.Equals(other));
-
-            ((WeakReference)target._elementReference).Target = null;
-
-            Assert.IsTrue(target.Equals(target));
-
-            ((WeakReference)other._elementReference).Target = null;
-
-            Assert.IsFalse(target.Equals(other));
-        }
-
-        [TestMethod()]
-        public void EqualsTest()
-        {
-            EqualsTestHelper<Object>(new Object(), new Object());
-        }
-
-        /// <summary>
-        ///A test for Equals
-        ///</summary>
-        public void EqualsTest1Helper<E>(E a)
-            where E : class
-        {
-            WeakKey<E> target = new WeakKey<E>() { _elementReference = new WeakReference(a) }; // TODO: Initialize to an appropriate value
-            object obj = null; // TODO: Initialize to an appropriate value
-            Assert.IsFalse(target.Equals(obj));
-
-            obj = new object();
-            Assert.IsFalse(target.Equals(obj));
-
-            obj = new WeakKey<E> { _elementReference = new WeakReference(a) };
-            Assert.IsTrue(target.Equals(obj));
-        }
-
-        [TestMethod()]
-        public void EqualsTest1()
-        {
-            EqualsTest1Helper<System.Collections.Generic.List<int>>(new System.Collections.Generic.List<int>());
-        }
 
         /// <summary>
         ///A test for GetValue
