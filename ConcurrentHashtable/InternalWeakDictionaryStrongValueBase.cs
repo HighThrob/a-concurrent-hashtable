@@ -184,7 +184,7 @@ namespace TvdP.Collections
         { ((IDictionary<IK, EV>)this)[FromHeapKeyToStorageKey(key)] = value; }
 
         public new bool IsEmpty
-        { get { return !((ICollection<KeyValuePair<EV, EK>>)this).GetEnumerator().MoveNext(); } }
+        { get { return !((ICollection<KeyValuePair<EK, EV>>)this).GetEnumerator().MoveNext(); } }
 
         public EV AddOrUpdate(HK key, Func<HK, EV> addValueFactory, Func<HK, EV, EV> updateValueFactory)
         {

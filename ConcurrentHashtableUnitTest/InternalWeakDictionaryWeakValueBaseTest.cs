@@ -786,23 +786,6 @@ namespace ConcurrentHashtableUnitTest
         /// <summary>
         ///A test for TryUpdate
         ///</summary>
-        void TryUpdateTestHelper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : IWeakValueRef<EV>, IEquatable<IV>
-            where EV : class
-            where HK : struct
-        {
-            InternalWeakDictionaryWeakValueBase<IK, IV, EK, EV, HK> target = null;
-            HK key = default(HK); // TODO: Initialize to an appropriate value
-            EV newValue = default(EV); // TODO: Initialize to an appropriate value
-            EV comparisonValue = default(EV); // TODO: Initialize to an appropriate value
-            bool expected = false; // TODO: Initialize to an appropriate value
-            bool actual;
-            actual = target.TryUpdate(key, newValue, comparisonValue);
-            Assert.AreEqual(expected, actual);
-            Assert.Inconclusive("Verify the correctness of this test method.");
-        }
-
         [TestMethod()]
         public void TryUpdateTest()
         {
@@ -854,18 +837,6 @@ namespace ConcurrentHashtableUnitTest
         /// <summary>
         ///A test for IsEmpty
         ///</summary>
-        void IsEmptyTestHelper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : IWeakValueRef<EV>, IEquatable<IV>
-            where EV : class
-            where HK : struct
-        {
-            InternalWeakDictionaryWeakValueBase<IK, IV, EK, EV, HK> target = null;
-            bool actual;
-            actual = target.IsEmpty;
-            Assert.Inconclusive("Verify the correctness of this test method.");
-        }
-
         [TestMethod()]
         public void IsEmptyTest()
         {
@@ -973,20 +944,7 @@ namespace ConcurrentHashtableUnitTest
         /// <summary>
         ///A test for System.Collections.Generic.IDictionary<EK,EV>.Keys
         ///</summary>
-        void KeysTestHelper<IK, IV, EK, EV, HK>()
-            where IK : ITrashable
-            where IV : IWeakValueRef<EV>, IEquatable<IV>
-            where EV : class
-            where HK : struct
-        {
-            IDictionary<EK, EV> target = null;
-            ICollection<EK> actual;
-            actual = target.Keys;
-            Assert.Inconclusive("Verify the correctness of this test method.");
-        }
-
         [TestMethod()]
-        [DeploymentItem("ConcurrentHashtable.dll")]
         public void KeysTest()
         {
             IWDT iwdt = new IWDT();
