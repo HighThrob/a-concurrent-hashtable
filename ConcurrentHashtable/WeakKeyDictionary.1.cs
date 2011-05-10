@@ -25,7 +25,7 @@ namespace TvdP.Collections
 #endif
         where TWeakKey1 : class
     {
-        class InternalWeakKeyDictionary :
+        sealed class InternalWeakKeyDictionary :
             InternalWeakDictionaryStrongValueBase<
                 Key<TWeakKey1, TStrongKey>, 
                 Tuple<TWeakKey1, TStrongKey>, 
@@ -35,11 +35,17 @@ namespace TvdP.Collections
         {
             public InternalWeakKeyDictionary(int concurrencyLevel, int capacity, KeyComparer<TWeakKey1, TStrongKey> keyComparer)
                 : base(concurrencyLevel, capacity, keyComparer)
-            { _comparer = keyComparer; }
+            { 
+                _comparer = keyComparer;
+                MaintenanceWorker.Register(this);
+            }
 
             public InternalWeakKeyDictionary(KeyComparer<TWeakKey1, TStrongKey> keyComparer)
                 : base(keyComparer)
-            { _comparer = keyComparer; }
+            { 
+                _comparer = keyComparer;
+                MaintenanceWorker.Register(this);
+            }
 
             public KeyComparer<TWeakKey1, TStrongKey> _comparer;
 
