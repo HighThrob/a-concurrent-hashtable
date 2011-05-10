@@ -19,6 +19,7 @@ namespace TvdP.Collections
 {
     internal abstract class InternalWeakDictionaryWeakValueBase<IK, IV, EK, EV, HK> : ConcurrentDictionary<IK, IV>, IMaintainable, IDictionary<EK, EV>, ICollection<KeyValuePair<EK, EV>>, IEnumerable<KeyValuePair<EK, EV>>
         where IK : ITrashable
+        //For IV we do not use the WeakValueRef struct directly in order to support unittesting.
         where IV : IWeakValueRef<EV>, IEquatable<IV>
         where EV : class
         where HK : struct
@@ -29,11 +30,11 @@ namespace TvdP.Collections
 #else
             : base(concurrencyLevel, capacity, keyComparer)
 #endif
-        { MaintenanceWorker.Register(this); }
+        { }
 
         protected InternalWeakDictionaryWeakValueBase(IEqualityComparer<IK> keyComparer)
             : base(keyComparer)
-        { MaintenanceWorker.Register(this); }
+        { }
 
         protected abstract IK FromExternalKeyToSearchKey(EK externalKey);
         protected abstract IK FromExternalKeyToStorageKey(EK externalKey);
@@ -52,10 +53,7 @@ namespace TvdP.Collections
         {
             foreach (var kvp in (IEnumerable<KeyValuePair<IK, IV>>)this)
                 if (kvp.Key.IsGarbage || kvp.Value.IsGarbage)
-                {
-                    IV value;
-                    this.TryRemove(kvp.Key, out value);
-                }
+                    ((ICollection<KeyValuePair<IK, IV>>)this).Remove(kvp);
         }
 
         #endregion
@@ -466,11 +464,11 @@ namespace TvdP.Collections
 #else
             : base(concurrencyLevel, capacity, keyComparer)
 #endif
-        { MaintenanceWorker.Register(this); }
+        { }
 
         protected InternalWeakDictionaryWeakValueBase(IEqualityComparer<IK> keyComparer)
             : base(keyComparer)
-        { MaintenanceWorker.Register(this); }
+        { }
 
         protected override WeakValueRef<EV> FromExternalValueToInternalValue(EV externalValue)
         { return WeakValueRef<EV>.Create( externalValue ); }

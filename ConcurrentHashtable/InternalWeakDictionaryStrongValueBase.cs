@@ -27,11 +27,11 @@ namespace TvdP.Collections
 #else
             : base(concurrencyLevel, capacity, keyComparer)
 #endif
-        { MaintenanceWorker.Register(this); }
+        { }
 
         protected InternalWeakDictionaryStrongValueBase(IEqualityComparer<IK> keyComparer)
             : base(keyComparer)
-        { MaintenanceWorker.Register(this); }
+        { }
 
         protected abstract IK FromExternalKeyToSearchKey(EK externalKey);
         protected abstract IK FromExternalKeyToStorageKey(EK externalKey);
