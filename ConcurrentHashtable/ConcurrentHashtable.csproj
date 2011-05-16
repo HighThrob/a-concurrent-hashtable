@@ -60,7 +60,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cache.cs" />
-    <Compile Include="HeapType.cs" />
+    <Compile Include="WeakDictionary.0.cs" />
+    <Compile Include="Stacktype.cs" />
     <Compile Include="InternalWeakDictionaryStrongValueBase.cs" />
     <Compile Include="KeyComparer.cs" />
     <Compile Include="WeakKeyDictionary.4.cs" />

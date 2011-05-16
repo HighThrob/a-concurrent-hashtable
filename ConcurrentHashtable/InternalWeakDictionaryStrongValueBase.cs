@@ -17,9 +17,9 @@ using System.Collections.Concurrent;
 
 namespace TvdP.Collections
 {
-    internal abstract class InternalWeakDictionaryStrongValueBase<IK, EK, EV, HK> : ConcurrentDictionary<IK, EV>, IMaintainable, IDictionary<EK, EV>, ICollection<KeyValuePair<EK, EV>>, IEnumerable<KeyValuePair<EK, EV>>
+    internal abstract class InternalWeakDictionaryStrongValueBase<IK, EK, EV, SK> : ConcurrentDictionary<IK, EV>, IMaintainable, IDictionary<EK, EV>, ICollection<KeyValuePair<EK, EV>>, IEnumerable<KeyValuePair<EK, EV>>
         where IK : ITrashable
-        where HK : struct
+        where SK : struct
     {
         protected InternalWeakDictionaryStrongValueBase(int concurrencyLevel, int capacity, IEqualityComparer<IK> keyComparer)
 #if SILVERLIGHT
@@ -35,10 +35,10 @@ namespace TvdP.Collections
 
         protected abstract IK FromExternalKeyToSearchKey(EK externalKey);
         protected abstract IK FromExternalKeyToStorageKey(EK externalKey);
-        protected abstract IK FromHeapKeyToSearchKey(HK externalKey);
-        protected abstract IK FromHeapKeyToStorageKey(HK externalKey);
+        protected abstract IK FromStackKeyToSearchKey(SK externalKey);
+        protected abstract IK FromStackKeyToStorageKey(SK externalKey);
         protected abstract bool FromInternalKeyToExternalKey(IK internalKey, out EK externalKey);
-        protected abstract bool FromInternalKeyToHeapKey(IK internalKey, out HK externalKey);
+        protected abstract bool FromInternalKeyToStackKey(IK internalKey, out SK externalKey);
 
         #region IMaintainable Members
 
@@ -171,32 +171,32 @@ namespace TvdP.Collections
 
         #endregion
 
-        public bool ContainsKey(HK key)
-        { return ((IDictionary<IK, EV>)this).ContainsKey(FromHeapKeyToSearchKey(key)); }
+        public bool ContainsKey(SK key)
+        { return ((IDictionary<IK, EV>)this).ContainsKey(FromStackKeyToSearchKey(key)); }
 
-        public bool TryGetValue(HK key, out EV value)
-        { return ((IDictionary<IK, EV>)this).TryGetValue(FromHeapKeyToSearchKey(key), out value); }
+        public bool TryGetValue(SK key, out EV value)
+        { return ((IDictionary<IK, EV>)this).TryGetValue(FromStackKeyToSearchKey(key), out value); }
 
-        public EV GetItem(HK key)
-        { return ((IDictionary<IK, EV>)this)[FromHeapKeyToStorageKey(key)]; }
+        public EV GetItem(SK key)
+        { return ((IDictionary<IK, EV>)this)[FromStackKeyToStorageKey(key)]; }
 
-        public void SetItem(HK key, EV value)
-        { ((IDictionary<IK, EV>)this)[FromHeapKeyToStorageKey(key)] = value; }
+        public void SetItem(SK key, EV value)
+        { ((IDictionary<IK, EV>)this)[FromStackKeyToStorageKey(key)] = value; }
 
         public new bool IsEmpty
         { get { return !((ICollection<KeyValuePair<EK, EV>>)this).GetEnumerator().MoveNext(); } }
 
-        public EV AddOrUpdate(HK key, Func<HK, EV> addValueFactory, Func<HK, EV, EV> updateValueFactory)
+        public EV AddOrUpdate(SK key, Func<SK, EV> addValueFactory, Func<SK, EV, EV> updateValueFactory)
         {
             return
                 base.AddOrUpdate(
-                    FromHeapKeyToStorageKey(key),
+                    FromStackKeyToStorageKey(key),
                     sKey => addValueFactory(key),
                     (sKey, oldValue) =>
                     {
-                        HK oldKey;
+                        SK oldKey;
 
-                        if (FromInternalKeyToHeapKey(sKey, out oldKey))
+                        if (FromInternalKeyToStackKey(sKey, out oldKey))
                             return updateValueFactory(oldKey, oldValue);
                         else
                         {
@@ -209,17 +209,17 @@ namespace TvdP.Collections
             ;
         }
 
-        public EV AddOrUpdate(HK key, EV addValue, Func<HK, EV, EV> updateValueFactory)
+        public EV AddOrUpdate(SK key, EV addValue, Func<SK, EV, EV> updateValueFactory)
         {
             return
                 AddOrUpdate(
-                    FromHeapKeyToStorageKey(key),
+                    FromStackKeyToStorageKey(key),
                     addValue,
                     (sKey, oldValue) =>
                     {
-                        HK oldKey;
+                        SK oldKey;
 
-                        if (FromInternalKeyToHeapKey(sKey, out oldKey))
+                        if (FromInternalKeyToStackKey(sKey, out oldKey))
                             return updateValueFactory(oldKey, oldValue);
                         else
                         {
@@ -232,10 +232,10 @@ namespace TvdP.Collections
             ;
         }
 
-        public EV GetOrAdd(HK key, EV value)
-        { return base.GetOrAdd(FromHeapKeyToStorageKey(key), value); }
+        public EV GetOrAdd(SK key, EV value)
+        { return base.GetOrAdd(FromStackKeyToStorageKey(key), value); }
 
-        public EV GetOrAdd(HK key, Func<HK, EV> valueFactory)
+        public EV GetOrAdd(SK key, Func<SK, EV> valueFactory)
         {
             EV hold;
             return this.TryGetValue(key, out hold) ? hold : GetOrAdd(key, valueFactory(key));
@@ -244,14 +244,14 @@ namespace TvdP.Collections
         public new KeyValuePair<EK, EV>[] ToArray()
         { return ((IEnumerable<KeyValuePair<EK, EV>>)this).ToArray(); }
 
-        public bool TryAdd(HK key, EV value)
-        { return base.TryAdd(FromHeapKeyToStorageKey(key), value); }
+        public bool TryAdd(SK key, EV value)
+        { return base.TryAdd(FromStackKeyToStorageKey(key), value); }
 
-        public bool TryRemove(HK key, out EV value)
-        { return base.TryRemove(FromHeapKeyToSearchKey(key), out value); }
+        public bool TryRemove(SK key, out EV value)
+        { return base.TryRemove(FromStackKeyToSearchKey(key), out value); }
 
-        public bool TryUpdate(HK key, EV newValue, EV comparisonValue)
-        { return base.TryUpdate(FromHeapKeyToSearchKey(key), newValue, comparisonValue); }
+        public bool TryUpdate(SK key, EV newValue, EV comparisonValue)
+        { return base.TryUpdate(FromStackKeyToSearchKey(key), newValue, comparisonValue); }
 
         public List<KeyValuePair<EK, EV>> GetContents()
         { return ((IEnumerable<KeyValuePair<EK, EV>>)this).ToList(); }
