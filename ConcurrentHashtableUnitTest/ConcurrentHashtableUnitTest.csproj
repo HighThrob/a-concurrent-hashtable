@@ -53,7 +53,8 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="WeakDictionary5Test.cs" />
+    <Compile Include="WeakDictionary0Test.cs" />
+    <Compile Include="WeakKeyDictionary4Test.cs" />
     <Compile Include="WeakKeyDictionary3Test.cs" />
     <Compile Include="WeakKeyDictionary2Test.cs" />
     <Compile Include="WeakKeyDictionary1Test.cs" />

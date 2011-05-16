@@ -56,6 +56,9 @@ namespace TvdP.Collections
 
     internal struct StrongKey<E> : ITrashable
     {
+        public StrongKey(E value)
+        { _element = value; }
+
         public E _element;
 
         #region ITrashable Members
@@ -108,7 +111,7 @@ namespace TvdP.Collections
     internal abstract class Key<W1, S> : KeyBase<WeakKey<W1>, S>
         where W1 : class
     {
-        public Key<W1, S> Set(HeapType<W1, S> h, KeyComparer<W1, S> comparer)
+        public Key<W1, S> Set(Stacktype<W1, S> h, KeyComparer<W1, S> comparer)
         {
             bool isWeak = IsWeak;
             _values.SetValue(h.Item1, isWeak);
@@ -118,18 +121,18 @@ namespace TvdP.Collections
         }
 
         public Key<W1, S> Set(Tuple<W1, S> t, KeyComparer<W1, S> comparer)
-        { return Set(t.AsHeapType(), comparer); }
+        { return Set(t.AsStacktype(), comparer); }
 
-        public bool Get(out HeapType<W1, S> t)
+        public bool Get(out Stacktype<W1, S> t)
         {
-            t = new HeapType<W1, S> { Item2 = _strongValue };
+            t = new Stacktype<W1, S> { Item2 = _strongValue };
             bool res = _values.GetValue(out t.Item1, IsWeak);
             return res;
         }
 
         public bool Get(out Tuple<W1, S> t)
         {
-            HeapType<W1, S> h;
+            Stacktype<W1, S> h;
             bool res = Get(out h);
             t = h.AsTuple();
             return res;
@@ -140,7 +143,7 @@ namespace TvdP.Collections
         where W1 : class
         where W2 : class
     {
-        public Key<W1, W2, S> Set(HeapType<W1, W2, S> h, KeyComparer<W1, W2, S> comparer)
+        public Key<W1, W2, S> Set(Stacktype<W1, W2, S> h, KeyComparer<W1, W2, S> comparer)
         {
             bool isWeak = IsWeak;
             _values.SetValue(h.Item1, isWeak);
@@ -151,11 +154,11 @@ namespace TvdP.Collections
         }
 
         public Key<W1, W2, S> Set(Tuple<W1, W2, S> t, KeyComparer<W1, W2, S> comparer)
-        { return Set(t.AsHeapType(), comparer); }
+        { return Set(t.AsStacktype(), comparer); }
 
-        public bool Get(out HeapType<W1, W2, S> t)
+        public bool Get(out Stacktype<W1, W2, S> t)
         {
-            t = new HeapType<W1, W2, S>() { Item3 = _strongValue };
+            t = new Stacktype<W1, W2, S>() { Item3 = _strongValue };
             bool isWeak = IsWeak;
             bool res = _values.GetValue(out t.Item1, isWeak);
             res = _values._tail.GetValue(out t.Item2, isWeak) && res;
@@ -164,7 +167,7 @@ namespace TvdP.Collections
 
         public bool Get(out Tuple<W1, W2, S> t)
         {
-            HeapType<W1, W2, S> h;
+            Stacktype<W1, W2, S> h;
             bool res = Get(out h);
             t = h.AsTuple();
             return res;
@@ -176,7 +179,7 @@ namespace TvdP.Collections
         where W2 : class
         where W3 : class
     {
-        public Key<W1, W2, W3, S> Set(HeapType<W1, W2, W3, S> h, KeyComparer<W1, W2, W3, S> comparer)
+        public Key<W1, W2, W3, S> Set(Stacktype<W1, W2, W3, S> h, KeyComparer<W1, W2, W3, S> comparer)
         {
             bool isWeak = IsWeak;
             _values.SetValue(h.Item1, isWeak);
@@ -188,11 +191,11 @@ namespace TvdP.Collections
         }
 
         public Key<W1, W2, W3, S> Set(Tuple<W1, W2, W3, S> t, KeyComparer<W1, W2, W3, S> comparer)
-        { return Set(t.AsHeapType(), comparer); }
+        { return Set(t.AsStacktype(), comparer); }
 
-        public bool Get(out HeapType<W1, W2, W3, S> t)
+        public bool Get(out Stacktype<W1, W2, W3, S> t)
         {
-            t = new HeapType<W1, W2, W3, S> { Item4 = _strongValue };
+            t = new Stacktype<W1, W2, W3, S> { Item4 = _strongValue };
             bool isWeak = IsWeak;
             bool res = _values.GetValue(out t.Item1, isWeak);
             res = _values._tail.GetValue(out t.Item2, isWeak) && res;
@@ -202,7 +205,7 @@ namespace TvdP.Collections
 
         public bool Get(out Tuple<W1, W2, W3, S> t)
         {
-            HeapType<W1, W2, W3, S> h;
+            Stacktype<W1, W2, W3, S> h;
             bool res = Get(out h);
             t = h.AsTuple();
             return res;
@@ -215,7 +218,7 @@ namespace TvdP.Collections
         where W3 : class
         where W4 : class
     {
-        public Key<W1, W2, W3, W4, S> Set(HeapType<W1, W2, W3, W4, S> h, KeyComparer<W1, W2, W3, W4, S> comparer)
+        public Key<W1, W2, W3, W4, S> Set(Stacktype<W1, W2, W3, W4, S> h, KeyComparer<W1, W2, W3, W4, S> comparer)
         {
             bool isWeak = IsWeak;
             _values.SetValue(h.Item1, isWeak);
@@ -228,11 +231,11 @@ namespace TvdP.Collections
         }
 
         public Key<W1, W2, W3, W4, S> Set(Tuple<W1, W2, W3, W4, S> t, KeyComparer<W1, W2, W3, W4, S> comparer)
-        { return Set(t.AsHeapType(), comparer); }
+        { return Set(t.AsStacktype(), comparer); }
 
-        public bool Get(out HeapType<W1, W2, W3, W4, S> t)
+        public bool Get(out Stacktype<W1, W2, W3, W4, S> t)
         {
-            t = new HeapType<W1, W2, W3, W4, S> { Item5 = _strongValue };
+            t = new Stacktype<W1, W2, W3, W4, S> { Item5 = _strongValue };
             bool isWeak = IsWeak;
             bool res = _values.GetValue(out t.Item1, isWeak);
             res = _values._tail.GetValue(out t.Item2, isWeak) && res;
@@ -243,7 +246,7 @@ namespace TvdP.Collections
 
         public bool Get(out Tuple<W1, W2, W3, W4, S> t)
         {
-            HeapType<W1, W2, W3, W4, S> h;
+            Stacktype<W1, W2, W3, W4, S> h;
             bool res = Get(out h);
             t = h.AsTuple();
             return res;

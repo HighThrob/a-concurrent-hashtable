@@ -16,44 +16,59 @@ using System.Security;
 
 namespace TvdP.Collections
 {
+    /// <summary>
+    /// Represents a thread-safe collection of key-value pairs that can be accessed
+    /// by multiple threads concurrently and has weak references to the values.
+    /// </summary>
+    /// <typeparam name="TStrongKey">The type of the keys in this dictionary.</typeparam>
+    /// <typeparam name="TValue">The type of the values in this dictionary. This must be a reference type.</typeparam>
+    /// <remarks>
+    /// Whenever any of the values held by this dictionary is garbage collected the key-value pair holding the value will be removed from the dictionary.
+    /// </remarks>
 #if !SILVERLIGHT
     [Serializable]
 #endif
-    public class WeakValueDictionary<TStrongKey, TValue> : DictionaryBase<TStrongKey, TValue>
+    public class WeakDictionary<TStrongKey, TValue> : DictionaryBase<TStrongKey, TValue>
 #if !SILVERLIGHT
     , ISerializable
 #endif
         where TValue : class
     {
-        class InternalWeakDictionary :
+        sealed class InternalWeakDictionary :
             InternalWeakDictionaryWeakValueBase<
                 StrongKey<TStrongKey>, 
                 TStrongKey, 
                 TValue,
-                Stacktype<TStrongKey>
+                StrongKey<TStrongKey>
             >
         {
             public InternalWeakDictionary(int concurrencyLevel, int capacity, KeyComparer<TStrongKey> keyComparer)
                 : base(concurrencyLevel, capacity, keyComparer)
-            { _comparer = keyComparer; }
+            { 
+                _comparer = keyComparer;
+                MaintenanceWorker.Register(this);
+            }
 
             public InternalWeakDictionary(KeyComparer<TStrongKey> keyComparer)
                 : base(keyComparer)
-            { _comparer = keyComparer; }
+            { 
+                _comparer = keyComparer;
+                MaintenanceWorker.Register(this);
+            }
 
             public KeyComparer<TStrongKey> _comparer;
 
             protected override StrongKey<TStrongKey> FromExternalKeyToSearchKey(TStrongKey externalKey)
-            { return new StrongKey<TStrongKey>() { _element = externalKey }; }
+            { return new StrongKey<TStrongKey>(externalKey); }
 
             protected override StrongKey<TStrongKey> FromExternalKeyToStorageKey(TStrongKey externalKey)
-            { return new StrongKey<TStrongKey>() { _element = externalKey }; }
+            { return new StrongKey<TStrongKey>(externalKey); }
 
-            protected override StrongKey<TStrongKey> FromStackKeyToSearchKey(Stacktype<TStrongKey> externalKey)
-            { return new StrongKey<TStrongKey>() { _element = externalKey.Item1 }; }
+            protected override StrongKey<TStrongKey> FromStackKeyToSearchKey(StrongKey<TStrongKey> externalKey)
+            { return externalKey; }
 
-            protected override StrongKey<TStrongKey> FromStackKeyToStorageKey(Stacktype<TStrongKey> externalKey)
-            { return new StrongKey<TStrongKey>() { _element = externalKey.Item1 }; }
+            protected override StrongKey<TStrongKey> FromStackKeyToStorageKey(StrongKey<TStrongKey> externalKey)
+            { return externalKey; }
 
             protected override bool FromInternalKeyToExternalKey(StrongKey<TStrongKey> internalKey, out TStrongKey externalKey)
             {
@@ -61,10 +76,10 @@ namespace TvdP.Collections
                 return true; 
             }
 
-            protected override bool FromInternalKeyToStackKey(StrongKey<TStrongKey> internalKey, out Stacktype<TStrongKey> externalKey)
+            protected override bool FromInternalKeyToStackKey(StrongKey<TStrongKey> internalKey, out StrongKey<TStrongKey> externalKey)
             {
-                externalKey = Stacktype.Create(internalKey._element);
-                return true;
+                externalKey = internalKey;
+                return true; 
             }
         }
 
@@ -74,7 +89,7 @@ namespace TvdP.Collections
         { get { return _internalDictionary; } }
 
 #if !SILVERLIGHT
-        WeakValueDictionary(SerializationInfo serializationInfo, StreamingContext streamingContext)
+        WeakDictionary(SerializationInfo serializationInfo, StreamingContext streamingContext)
         {
             var comparer = (KeyComparer<TStrongKey>)serializationInfo.GetValue("Comparer", typeof(KeyComparer<TStrongKey>));
             var items = (List<KeyValuePair<TStrongKey, TValue>>)serializationInfo.GetValue("Items", typeof(List<KeyValuePair<TStrongKey, TValue>>));
@@ -93,19 +108,19 @@ namespace TvdP.Collections
         #endregion
 #endif
 
-        public WeakValueDictionary()
+        public WeakDictionary()
             : this(EqualityComparer<TStrongKey>.Default)
         {}
 
-        public WeakValueDictionary(IEqualityComparer<TStrongKey> strongKeyComparer)
+        public WeakDictionary(IEqualityComparer<TStrongKey> strongKeyComparer)
             : this(Enumerable.Empty<KeyValuePair<TStrongKey,TValue>>(), strongKeyComparer)
         {}
 
-        public WeakValueDictionary(IEnumerable<KeyValuePair<TStrongKey,TValue>> collection)
+        public WeakDictionary(IEnumerable<KeyValuePair<TStrongKey,TValue>> collection)
             : this(collection, EqualityComparer<TStrongKey>.Default)
         {}
 
-        public WeakValueDictionary(IEnumerable<KeyValuePair<TStrongKey, TValue>> collection, IEqualityComparer<TStrongKey> strongKeyComparer)
+        public WeakDictionary(IEnumerable<KeyValuePair<TStrongKey, TValue>> collection, IEqualityComparer<TStrongKey> strongKeyComparer)
         {
             _internalDictionary = 
                 new InternalWeakDictionary(
@@ -116,11 +131,11 @@ namespace TvdP.Collections
             _internalDictionary.InsertContents(collection);
         }
 
-        public WeakValueDictionary(int concurrencyLevel, int capacity)
+        public WeakDictionary(int concurrencyLevel, int capacity)
             : this(concurrencyLevel, capacity, EqualityComparer<TStrongKey>.Default)
         {}
 
-        public WeakValueDictionary(int concurrencyLevel, IEnumerable<KeyValuePair<TStrongKey, TValue>> collection, IEqualityComparer<TStrongKey> strongKeyComparer)
+        public WeakDictionary(int concurrencyLevel, IEnumerable<KeyValuePair<TStrongKey, TValue>> collection, IEqualityComparer<TStrongKey> strongKeyComparer)
         {
             var contentsList = collection.ToList();
             _internalDictionary =
@@ -133,7 +148,7 @@ namespace TvdP.Collections
             _internalDictionary.InsertContents(contentsList);
         }
 
-        public WeakValueDictionary(int concurrencyLevel, int capacity, IEqualityComparer<TStrongKey> strongKeyComparer)
+        public WeakDictionary(int concurrencyLevel, int capacity, IEqualityComparer<TStrongKey> strongKeyComparer)
         {
             _internalDictionary =
                 new InternalWeakDictionary(
@@ -146,15 +161,15 @@ namespace TvdP.Collections
 
 
         public bool ContainsKey(TStrongKey strongKey)
-        { return _internalDictionary.ContainsKey(Stacktype.Create(strongKey)); }
+        { return _internalDictionary.ContainsKey( new StrongKey<TStrongKey>(strongKey) ); }
 
         public bool TryGetValue(TStrongKey strongKey, out TValue value)
-        { return _internalDictionary.TryGetValue(Stacktype.Create(strongKey), out value); }
+        { return _internalDictionary.TryGetValue(new StrongKey<TStrongKey>(strongKey), out value); }
 
         public TValue this[TStrongKey strongKey]
         {
-            get { return _internalDictionary.GetItem(Stacktype.Create(strongKey)); }
-            set { _internalDictionary.SetItem(Stacktype.Create(strongKey), value); }
+            get { return _internalDictionary.GetItem(new StrongKey<TStrongKey>(strongKey)); }
+            set { _internalDictionary.SetItem(new StrongKey<TStrongKey>(strongKey), value); }
         }
 
         public bool IsEmpty
@@ -162,47 +177,56 @@ namespace TvdP.Collections
 
         public TValue AddOrUpdate(TStrongKey strongKey, Func<TStrongKey, TValue> addValueFactory, Func<TStrongKey, TValue, TValue> updateValueFactory)
         {
+            if (null == addValueFactory)
+                throw new ArgumentNullException("addValueFactory");
+
+            if (null == updateValueFactory)
+                throw new ArgumentNullException("updateValueFactory");
+
             return
                 _internalDictionary.AddOrUpdate(
-                    Stacktype.Create(strongKey), 
-                    ht => addValueFactory(ht.Item1), 
-                    (ht, v) => updateValueFactory(ht.Item1, v)
+                    new StrongKey<TStrongKey>(strongKey), 
+                    hr => addValueFactory(hr._element), 
+                    (hr, v) => updateValueFactory(hr._element, v)
                 )
             ;
         }
 
         public TValue AddOrUpdate(TStrongKey strongKey, TValue addValue, Func<TStrongKey, TValue, TValue> updateValueFactory)
         {
+            if (null == updateValueFactory)
+                throw new ArgumentNullException("updateValueFactory");
+
             return
                 _internalDictionary.AddOrUpdate(
-                    Stacktype.Create(strongKey),
+                    new StrongKey<TStrongKey>(strongKey),
                     addValue,
-                    (ht, v) => updateValueFactory(ht.Item1, v)
+                    (hr, v) => updateValueFactory(hr._element, v)
                 )
             ;
         }
 
         public TValue GetOrAdd(TStrongKey strongKey, TValue value)
-        { return _internalDictionary.GetOrAdd(Stacktype.Create(strongKey), value); }
+        { return _internalDictionary.GetOrAdd(new StrongKey<TStrongKey>(strongKey), value); }
 
         public TValue GetOrAdd(TStrongKey strongKey, Func<TStrongKey, TValue> valueFactory)
         {
             if (null == valueFactory)
                 throw new ArgumentNullException("valueFactory");
 
-            return _internalDictionary.GetOrAdd(Stacktype.Create(strongKey), ht => valueFactory(ht.Item1)); 
+            return _internalDictionary.GetOrAdd(new StrongKey<TStrongKey>(strongKey), hr => valueFactory(hr._element)); 
         }
         
         public KeyValuePair<TStrongKey, TValue>[] ToArray()
         { return _internalDictionary.ToArray(); }
 
         public bool TryAdd(TStrongKey strongKey, TValue value)
-        { return _internalDictionary.TryAdd(Stacktype.Create(strongKey), value); }
+        { return _internalDictionary.TryAdd(new StrongKey<TStrongKey>(strongKey), value); }
 
         public bool TryRemove(TStrongKey strongKey, out TValue value)
-        { return _internalDictionary.TryRemove(Stacktype.Create(strongKey), out value); }
+        { return _internalDictionary.TryRemove(new StrongKey<TStrongKey>(strongKey), out value); }
 
         public bool TryUpdate(TStrongKey strongKey, TValue newValue, TValue comparisonValue)
-        { return _internalDictionary.TryUpdate(Stacktype.Create(strongKey), newValue, comparisonValue); }
+        { return _internalDictionary.TryUpdate(new StrongKey<TStrongKey>(strongKey), newValue, comparisonValue); }
     }
 }

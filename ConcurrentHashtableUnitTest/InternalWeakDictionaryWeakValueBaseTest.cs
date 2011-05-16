@@ -166,12 +166,12 @@ namespace ConcurrentHashtableUnitTest
                 return res;
             }
 
-            protected override Trashable FromHeapKeyToSearchKey(KeyValuePair<int, int> externalKey)
+            protected override Trashable FromStackKeyToSearchKey(KeyValuePair<int, int> externalKey)
             {
                 return FromExternalKeyToSearchKey(Tuple.Create(externalKey.Key, externalKey.Value));
             }
 
-            protected override Trashable FromHeapKeyToStorageKey(KeyValuePair<int, int> externalKey)
+            protected override Trashable FromStackKeyToStorageKey(KeyValuePair<int, int> externalKey)
             {
                 return FromExternalKeyToStorageKey(Tuple.Create(externalKey.Key, externalKey.Value));
             }
@@ -182,7 +182,7 @@ namespace ConcurrentHashtableUnitTest
                 return !internalKey.IsGarbage; 
             }
 
-            protected override bool FromInternalKeyToHeapKey(Trashable internalKey, out KeyValuePair<int, int> externalKey)
+            protected override bool FromInternalKeyToStackKey(Trashable internalKey, out KeyValuePair<int, int> externalKey)
             {
                 Tuple<int, int> itm;
                 bool res = FromInternalKeyToExternalKey(internalKey, out itm);
