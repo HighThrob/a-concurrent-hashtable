@@ -137,17 +137,7 @@ namespace TvdP.Collections
         { get { return false; } }
 
         bool ICollection<KeyValuePair<EK, EV>>.Remove(KeyValuePair<EK, EV> item)
-        {
-            return
-                ((IDictionary<IK, EV>)this)
-                    .Remove(
-                        new KeyValuePair<IK, EV>(
-                            FromExternalKeyToSearchKey(item.Key),
-                            item.Value
-                        )
-                    )
-            ;
-        }
+        { return RemoveIKVP(FromExternalKeyToSearchKey(item.Key), item.Value) ; }
 
         #endregion
 
@@ -201,12 +191,17 @@ namespace TvdP.Collections
                         else
                         {
                             //boyscout
-                            ((ICollection<KeyValuePair<IK, EV>>)this).Remove(new KeyValuePair<IK, EV>(sKey, oldValue));
+                            RemoveIKVP(sKey, oldValue);
                             return addValueFactory(key);
                         }
                     }
                 )
             ;
+        }
+
+        private bool RemoveIKVP(IK sKey, EV oldValue)
+        {
+            return ((ICollection<KeyValuePair<IK, EV>>)this).Remove(new KeyValuePair<IK, EV>(sKey, oldValue));
         }
 
         public EV AddOrUpdate(SK key, EV addValue, Func<SK, EV, EV> updateValueFactory)
@@ -224,7 +219,7 @@ namespace TvdP.Collections
                         else
                         {
                             //boyscout
-                            ((ICollection<KeyValuePair<IK, EV>>)this).Remove(new KeyValuePair<IK, EV>(sKey, oldValue));
+                            RemoveIKVP(sKey, oldValue);
                             return addValue;
                         }
                     }

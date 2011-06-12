@@ -104,11 +104,11 @@ namespace ConcurrentHashtableUnitTest
             other = WeakValueRef<E>.Create(a);
             Assert.IsTrue(target.Equals(other));
 
-            ((WeakReference)target._valueReference).Target = null;
+            ((WeakReference)target.Reference).Target = null;
 
             Assert.IsTrue(target.Equals(target));
 
-            ((WeakReference)other._valueReference).Target = null;
+            ((WeakReference)other.Reference).Target = null;
 
             Assert.IsFalse(target.Equals(other));
         }
@@ -178,7 +178,7 @@ namespace ConcurrentHashtableUnitTest
 
             Assert.IsFalse(target.IsGarbage);
 
-            target._valueReference.Target = null;
+            ((WeakReference)target.Reference).Target = null;
 
             Assert.IsTrue(target.IsGarbage);
         }

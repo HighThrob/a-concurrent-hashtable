@@ -233,7 +233,7 @@ namespace TvdP.Collections
         /// </summary>
         public void Clear()
         {
-            ((ICollection<KeyValuePair<Tuple<TKey,bool>,TValue>>)_Level2Cache).Clear();
+            ((ICollection<KeyValuePair<Tuple<object,bool>,object>>)_Level2Cache).Clear();
             _Level1Cache.Clear();
         }
     }
