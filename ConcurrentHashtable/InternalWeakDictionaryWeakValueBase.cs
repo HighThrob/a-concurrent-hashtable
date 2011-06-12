@@ -75,7 +75,7 @@ namespace TvdP.Collections
                         else
                         {
                             //boyscout
-                            ((ICollection<KeyValuePair<IK, IV>>)this).Remove(new KeyValuePair<IK, IV>(sKey, oldItm));
+                            RemoveIKVP(sKey, oldItm);
                             return newItm;
                         }
                     }
@@ -112,7 +112,7 @@ namespace TvdP.Collections
                     return true;
 
                 //boyscout
-                ((IDictionary<IK, IV>)this).Remove(new KeyValuePair<IK, IV>(searchKey, internalValue));
+                RemoveIKVP(searchKey, internalValue);
             }
 
             value = default(EV);
@@ -202,13 +202,7 @@ namespace TvdP.Collections
         bool ICollection<KeyValuePair<EK, EV>>.Remove(KeyValuePair<EK, EV> item)
         {
             return
-                ((IDictionary<IK, IV>)this)
-                    .Remove(
-                        new KeyValuePair<IK, IV>(
-                            FromExternalKeyToSearchKey(item.Key),
-                            FromExternalValueToInternalValue(item.Value)
-                        )
-                    )
+                RemoveIKVP(FromExternalKeyToSearchKey(item.Key),FromExternalValueToInternalValue(item.Value))
             ;
         }
 
@@ -245,9 +239,16 @@ namespace TvdP.Collections
         public bool TryGetValue(SK key, out EV value)
         {
             IV itm;
+            IK internalKey = FromStackKeyToSearchKey(key);
 
             if (((IDictionary<IK, IV>)this).TryGetValue(FromStackKeyToSearchKey(key), out itm))
-                return FromInternalValueToExternalValue(itm, out value);
+            {
+                if (FromInternalValueToExternalValue(itm, out value))
+                    return true;
+
+                //boyscout
+                RemoveIKVP(internalKey, itm);
+            }
 
             value = default(EV);
             return false;
@@ -272,111 +273,111 @@ namespace TvdP.Collections
 
         public EV AddOrUpdate(SK key, Func<SK, EV> addValueFactory, Func<SK, EV, EV> updateValueFactory)
         {
-            //variables to hold references to newly created values so they will remain alive
-            EV hold1 ;
-            EV hold2 ;
+            while (true)
+            {
+                //variables to hold references to newly created values so they will remain alive
+                EV hold1;
+                EV hold2;
 
-            FromInternalValueToExternalValue(
-                base.AddOrUpdate(
-                    FromStackKeyToStorageKey(key),
-                    sKey => FromExternalValueToInternalValue(hold1 = addValueFactory(key)),
-                    (sKey, oldItm) =>
-                    {
-                        EV oldValue;
-                        SK oldKey;
-                        EV newValue;
+                if (
+                    FromInternalValueToExternalValue(
+                        base.AddOrUpdate(
+                            FromStackKeyToStorageKey(key),
+                            sKey => FromExternalValueToInternalValue(hold1 = addValueFactory(key)),
+                            (sKey, oldItm) =>
+                            {
+                                EV oldValue;
+                                SK oldKey;
+                                EV newValue;
 
-                        if (
-                            FromInternalKeyToStackKey(sKey, out oldKey)
-                            && FromInternalValueToExternalValue(oldItm, out oldValue)
-                        )
-                            newValue = updateValueFactory(oldKey, oldValue);
-                        else
-                        {
-                            //boyscout
-                            ((ICollection<KeyValuePair<IK, IV>>)this).Remove(new KeyValuePair<IK, IV>(sKey, oldItm));
-                            newValue = addValueFactory(key);
-                        }
+                                if (
+                                    FromInternalKeyToStackKey(sKey, out oldKey)
+                                    && FromInternalValueToExternalValue(oldItm, out oldValue)
+                                )
+                                    newValue = updateValueFactory(oldKey, oldValue);
+                                else
+                                {
+                                    //boyscout
+                                    RemoveIKVP(sKey, oldItm);
+                                    newValue = addValueFactory(key);
+                                }
 
-                        return FromExternalValueToInternalValue(hold2 = newValue);
-                    }
-                ),
-                out hold1
-            );
-
-
-            return hold1;
+                                return FromExternalValueToInternalValue(hold2 = newValue);
+                            }
+                        ),
+                        out hold1
+                    )
+                )
+                    return hold1;
+            }
         }
 
         public EV AddOrUpdate(SK key, EV addValue, Func<SK, EV, EV> updateValueFactory)
         {
-            var newItm = FromExternalValueToInternalValue(addValue);
-            var internalKey = FromStackKeyToStorageKey(key);
+            while (true)
+            {
+                //this inside loop to prevent optimizer from optimizing away our reference to addValue.
+                var newItm = FromExternalValueToInternalValue(addValue);
+                var internalKey = FromStackKeyToStorageKey(key);
 
-            if (base.TryAdd(internalKey, newItm))
-                return addValue;
+                if (base.TryAdd(internalKey, newItm))
+                    return addValue;
 
-            EV hold = default(EV);
+                EV hold = default(EV);
 
-            FromInternalValueToExternalValue(
-                base.AddOrUpdate(
-                    FromStackKeyToStorageKey(key),
-                    newItm,
-                    (sKey, oldItm) =>
-                    {
-                        EV oldValue;
-                        SK oldKey;
+                if(
+                    FromInternalValueToExternalValue(
+                        base.AddOrUpdate(
+                            FromStackKeyToStorageKey(key),
+                            newItm,
+                            (sKey, oldItm) =>
+                            {
+                                EV oldValue;
+                                SK oldKey;
 
-                        if (
-                            FromInternalKeyToStackKey(sKey, out oldKey)
-                            && FromInternalValueToExternalValue(oldItm, out oldValue)
-                        )
-                            return FromExternalValueToInternalValue(hold = updateValueFactory(oldKey, oldValue));
-                        else
-                        {
-                            //boyscout
-                            ((ICollection<KeyValuePair<IK, IV>>)this).Remove(new KeyValuePair<IK, IV>(sKey, oldItm));
-                            return newItm;
-                        }
-                    }
-                ),
-                out hold
-            );
-
-
-            return hold;
+                                if (
+                                    FromInternalKeyToStackKey(sKey, out oldKey)
+                                    && FromInternalValueToExternalValue(oldItm, out oldValue)
+                                )
+                                    return FromExternalValueToInternalValue(hold = updateValueFactory(oldKey, oldValue));
+                                else
+                                {
+                                    //boyscout
+                                    RemoveIKVP(sKey, oldItm);
+                                    return newItm;
+                                }
+                            }
+                        ),
+                        out hold
+                    )
+                )
+                    return hold;
+            }
         }
 
         public EV GetOrAdd(SK key, EV value)
         {
-            var newItm = FromExternalValueToInternalValue(value);
-            var internalKey = FromStackKeyToStorageKey(key);
+            while (true)
+            {
+                //this inside loop to prevent optimizer from optimizing away our reference to value.
+                var newItm = FromExternalValueToInternalValue(value);
+                var internalKey = FromStackKeyToStorageKey(key);
 
-            EV hold;
+                EV hold;
 
-            if(FromInternalValueToExternalValue(base.GetOrAdd(internalKey, newItm), out hold)) 
-                return hold;
+                IV item = base.GetOrAdd(internalKey, newItm);
 
-            FromInternalValueToExternalValue(
-                base.AddOrUpdate(
-                    internalKey,
-                    newItm,
-                    (sKey, oldItm) =>
-                    {
-                        if (sKey.IsGarbage || oldItm.IsGarbage)
-                        {
-                            //boyscout
-                            ((ICollection<KeyValuePair<IK, IV>>)this).Remove(new KeyValuePair<IK, IV>(sKey, oldItm));
-                            return newItm;
-                        }
-                        else
-                            return oldItm;
-                    }
-                ),
-                out hold
-            );
+                if (FromInternalValueToExternalValue(item, out hold))
+                    return hold;
 
-            return hold;
+                //boyscout
+                RemoveIKVP(internalKey, item);
+            }
+        }
+
+        private bool RemoveIKVP(IK internalKey, IV item)
+        {
+            return ((ICollection<KeyValuePair<IK, IV>>)this).Remove(new KeyValuePair<IK, IV>(internalKey, item));
         }
 
         public EV GetOrAdd(SK key, Func<SK, EV> valueFactory)
@@ -406,7 +407,7 @@ namespace TvdP.Collections
                         if (k.IsGarbage || itm.IsGarbage)
                         {
                             //boyscout
-                            ((ICollection<KeyValuePair<IK, IV>>)this).Remove(new KeyValuePair<IK, IV>(k, itm));
+                            RemoveIKVP(k, itm);
                             return newItm;
                         }
                         else

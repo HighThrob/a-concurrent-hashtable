@@ -26,9 +26,9 @@ namespace TvdP.Collections
         public static WeakValueRef<V> Create(V value)
         { return new WeakValueRef<V> { _valueReference = new WeakReference(value == null ? NullValue : value) }; }
 
-        public static object NullValue = new object();
+        static object NullValue = new object();
 
-        public WeakReference _valueReference;
+        WeakReference _valueReference;
 
         public object Reference { get{ return _valueReference; } }
 
