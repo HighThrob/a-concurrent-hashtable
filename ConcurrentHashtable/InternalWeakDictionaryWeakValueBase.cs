@@ -314,12 +314,11 @@ namespace TvdP.Collections
 
         public EV AddOrUpdate(SK key, EV addValue, Func<SK, EV, EV> updateValueFactory)
         {
+            var newItm = FromExternalValueToInternalValue(addValue);
+            var internalKey = FromStackKeyToStorageKey(key);
+
             while (true)
             {
-                //this inside loop to prevent optimizer from optimizing away our reference to addValue.
-                var newItm = FromExternalValueToInternalValue(addValue);
-                var internalKey = FromStackKeyToStorageKey(key);
-
                 if (base.TryAdd(internalKey, newItm))
                     return addValue;
 
@@ -353,16 +352,17 @@ namespace TvdP.Collections
                 )
                     return hold;
             }
+
+            GC.KeepAlive(addValue);
         }
 
         public EV GetOrAdd(SK key, EV value)
         {
+            var newItm = FromExternalValueToInternalValue(value);
+            var internalKey = FromStackKeyToStorageKey(key);
+
             while (true)
             {
-                //this inside loop to prevent optimizer from optimizing away our reference to value.
-                var newItm = FromExternalValueToInternalValue(value);
-                var internalKey = FromStackKeyToStorageKey(key);
-
                 EV hold;
 
                 IV item = base.GetOrAdd(internalKey, newItm);
@@ -373,6 +373,8 @@ namespace TvdP.Collections
                 //boyscout
                 RemoveIKVP(internalKey, item);
             }
+
+            GC.KeepAlive(value);
         }
 
         private bool RemoveIKVP(IK internalKey, IV item)
