@@ -324,7 +324,7 @@ namespace TvdP.Collections
 
                 EV hold = default(EV);
 
-                if(
+                if (
                     FromInternalValueToExternalValue(
                         base.AddOrUpdate(
                             FromStackKeyToStorageKey(key),
@@ -350,10 +350,13 @@ namespace TvdP.Collections
                         out hold
                     )
                 )
+                {
+                    GC.KeepAlive(addValue);
                     return hold;
+                }
             }
 
-            GC.KeepAlive(addValue);
+            
         }
 
         public EV GetOrAdd(SK key, EV value)
@@ -368,13 +371,14 @@ namespace TvdP.Collections
                 IV item = base.GetOrAdd(internalKey, newItm);
 
                 if (FromInternalValueToExternalValue(item, out hold))
+                {
+                    GC.KeepAlive(value);
                     return hold;
+                }
 
                 //boyscout
                 RemoveIKVP(internalKey, item);
-            }
-
-            GC.KeepAlive(value);
+            }            
         }
 
         private bool RemoveIKVP(IK internalKey, IV item)
